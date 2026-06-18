@@ -1,0 +1,38 @@
+# Build directories
+build/
+out/
+cmake-build-*/
+
+# CMake generated
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# IDE
+.vscode/
+.idea/
+*.user
+*.creator
+*.config
+*.files
+*.includes
+
+# Compiled
+*.exe
+*.dll
+*.so
+*.dylib
+*.o
+*.obj
+
+# Qt
+*.qm
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+
+# FetchContent cache
+_deps/
