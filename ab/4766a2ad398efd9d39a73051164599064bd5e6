@@ -1,0 +1,19 @@
+.editorconfig
+  s_825911455b4997::t_2a98d91d52e7a6 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "ab4766a2ad398efd9d39a73051164599064bd5e6",
+  "prompts": {},
+  "sessions": {
+    "s_825911455b4997": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6be6d262-1fd8-429f-85cc-6f83b0c43371",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "mingzhou <mingzhou@tsign.cn>"
+    }
+  }
+}
