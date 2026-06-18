@@ -1,0 +1,22 @@
+CMakeLists.txt
+  s_825911455b4997::t_4d6056354c31cb 13
+  s_825911455b4997::t_d7d06dda682596 11
+.gitmodules
+  s_825911455b4997::t_536b82d4fc888a 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "c87c8f23a44d29bfdc750425a1299c1ffc579580",
+  "prompts": {},
+  "sessions": {
+    "s_825911455b4997": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6be6d262-1fd8-429f-85cc-6f83b0c43371",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "mingzhou <mingzhou@tsign.cn>"
+    }
+  }
+}
