@@ -14,7 +14,6 @@ static constexpr int kMaxItems  = 8;
 
 MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
     setupUi();
-
     m_hotkey = new QHotkey(QKeySequence("Alt+Space"), true, this);
     connect(m_hotkey, &QHotkey::activated, this, &MainWindow::toggle);
 }
