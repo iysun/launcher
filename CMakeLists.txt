@@ -8,14 +8,9 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
-include(FetchContent)
-FetchContent_Declare(QHotkey
-    GIT_REPOSITORY https://github.com/Skycoder42/QHotkey.git
-    GIT_TAG 1.5.0
-)
-FetchContent_MakeAvailable(QHotkey)
+add_subdirectory(third_party/QHotkey)
 
-add_executable(launcher
+qt_add_executable(launcher
     src/main.cpp
     src/mainwindow.cpp
     src/plugins/appplugin.cpp
@@ -23,7 +18,3 @@ add_executable(launcher
 
 target_include_directories(launcher PRIVATE src)
 target_link_libraries(launcher PRIVATE Qt6::Widgets qhotkey)
-
-if(WIN32)
-    set_target_properties(launcher PROPERTIES WIN32_EXECUTABLE TRUE)
-endif()
