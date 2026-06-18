@@ -1,0 +1,21 @@
+AGENTS.md
+  s_825911455b4997::t_768a5c124152d6 1-144
+CLAUDE.md
+  s_825911455b4997::t_13f56602b457c2 1,3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "adebb25275886749dd9972a7f27684ebbd1f7bbd",
+  "prompts": {},
+  "sessions": {
+    "s_825911455b4997": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6be6d262-1fd8-429f-85cc-6f83b0c43371",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "mingzhou <mingzhou@tsign.cn>"
+    }
+  }
+}
