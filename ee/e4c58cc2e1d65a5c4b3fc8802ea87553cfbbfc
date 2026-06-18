@@ -1,0 +1,19 @@
+src/main.cpp
+  s_825911455b4997::t_56ec254b6c26a0 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "eee4c58cc2e1d65a5c4b3fc8802ea87553cfbbfc",
+  "prompts": {},
+  "sessions": {
+    "s_825911455b4997": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6be6d262-1fd8-429f-85cc-6f83b0c43371",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "mingzhou <mingzhou@tsign.cn>"
+    }
+  }
+}
