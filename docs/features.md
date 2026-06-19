@@ -8,6 +8,7 @@
 | 无边框悬浮窗 | 居中显示，失焦自动隐藏，always-on-top |
 | 键盘导航 | ↑ ↓ 移动焦点，Enter 执行，Esc 关闭 |
 | 应用搜索插件 | Windows 扫描 Start Menu `.lnk`，Linux 解析 `.desktop` |
+| 结果项展示 | 自定义 delegate：真实应用图标 + 两行（标题 / 真实路径，长路径中间省略）。Windows 用 COM 解析 `.lnk` 目标 exe |
 | 插件接口 | `IPlugin` 抽象接口，支持任意扩展 |
 
 ---

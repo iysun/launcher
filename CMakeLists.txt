@@ -14,7 +14,13 @@ qt_add_executable(launcher
     src/main.cpp
     src/mainwindow.cpp
     src/plugins/appplugin.cpp
+    src/ui/resultdelegate.cpp
 )
 
 target_include_directories(launcher PRIVATE src)
 target_link_libraries(launcher PRIVATE Qt6::Widgets qhotkey)
+
+# MinGW 不像 MSVC 自动链接 COM 库，需显式链接（IShellLink / CLSID_ShellLink）
+if(WIN32)
+    target_link_libraries(launcher PRIVATE ole32 oleaut32 uuid)
+endif()

@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "ui/resultdelegate.h"
 #include <QApplication>
 #include <QHotkey>
 #include <QKeyEvent>
@@ -8,7 +9,7 @@
 #include <QVBoxLayout>
 
 static constexpr int kWidth     = 620;
-static constexpr int kItemH     = 44;
+static constexpr int kItemH     = 56;  // 须与 ResultDelegate::sizeHint 同步
 static constexpr int kSearchH   = 52;
 static constexpr int kMaxItems  = 8;
 
@@ -49,6 +50,8 @@ void MainWindow::setupUi() {
 
     m_list = new QListWidget(this);
     m_list->setFocusPolicy(Qt::StrongFocus);
+    m_list->setItemDelegate(new ResultDelegate(m_list));
+    m_list->setUniformItemSizes(true);
     m_list->setStyleSheet(R"(
         QListWidget {
             background: #1e1e2e;
@@ -58,9 +61,6 @@ void MainWindow::setupUi() {
             font-size: 14px;
             outline: 0;
         }
-        QListWidget::item { height: 44px; padding: 0 16px; }
-        QListWidget::item:selected { background: #313244; color: #89b4fa; }
-        QListWidget::item:hover    { background: #181825; }
     )");
     m_list->hide();
 
@@ -127,9 +127,9 @@ void MainWindow::showResults(const QList<ResultItem> &items) {
     }
 
     for (const auto &item : items) {
-        auto *li = new QListWidgetItem(item.icon, item.title);
-        li->setToolTip(item.subtitle);
+        auto *li = new QListWidgetItem();  // 内容由 ResultDelegate 绘制
         li->setData(Qt::UserRole, QVariant::fromValue(item));
+        li->setToolTip(item.subtitle);
         m_list->addItem(li);
     }
 
