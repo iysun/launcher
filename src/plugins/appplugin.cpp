@@ -1,4 +1,5 @@
 #include "appplugin.h"
+#include <algorithm>
 #include <QDir>
 #include <QFileInfo>
 #include <QProcess>
@@ -15,11 +16,36 @@ AppPlugin::AppPlugin() {
     loadApps();
 }
 
+// 匹配打分：完全相等 > 前缀 > 词首 > 普通子串；同档优先短标题。无匹配返回 -1
+static int matchScore(const QString &title, const QString &kw) {
+    const int idx = title.indexOf(kw, 0, Qt::CaseInsensitive);
+    if (idx < 0) return -1;
+    if (title.compare(kw, Qt::CaseInsensitive) == 0) return 1000;
+    if (idx == 0) return 800 - title.length();
+    const QChar prev = title.at(idx - 1);
+    const QChar cur  = title.at(idx);
+    const bool boundary = prev == ' ' || prev == '-' || prev == '_' ||
+                          (prev.isLower() && cur.isUpper());  // 空格/连字符/驼峰边界
+    return (boundary ? 600 : 300) - title.length();
+}
+
 QList<ResultItem> AppPlugin::query(const QString &keyword) {
-    QList<ResultItem> results;
+    const QString kw = keyword.trimmed();
+    if (kw.isEmpty()) return {};
+
+    QList<QPair<int, const ResultItem *>> scored;
     for (const auto &app : m_apps) {
-        if (app.title.contains(keyword, Qt::CaseInsensitive))
-            results.append(app);
+        const int s = matchScore(app.title, kw);
+        if (s >= 0) scored.append({s, &app});
+    }
+    std::sort(scored.begin(), scored.end(), [](const auto &a, const auto &b) {
+        if (a.first != b.first) return a.first > b.first;
+        return a.second->title.compare(b.second->title, Qt::CaseInsensitive) < 0;
+    });
+
+    QList<ResultItem> results;
+    for (const auto &pr : scored) {
+        results.append(*pr.second);
         if (results.size() >= 8) break;
     }
     return results;

@@ -32,15 +32,34 @@ void ResultDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt,
     const QRect textR = r.adjusted(kIcon + kGap, 0, 0, 0);
     const int   half  = textR.height() / 2;
 
-    // 上行：标题（粗体）
+    // 上行：标题（粗体），命中关键字高亮
     QFont tf = opt.font;
     tf.setPointSize(11);
     tf.setBold(true);
     p->setFont(tf);
-    p->setPen(selected ? QColor("#89b4fa") : QColor("#cdd6f4"));
-    const QRect titleR(textR.left(), textR.top() + 6, textR.width(), half);
-    p->drawText(titleR, Qt::AlignLeft | Qt::AlignVCenter,
-                p->fontMetrics().elidedText(item.title, Qt::ElideRight, titleR.width()));
+    const QRect  titleR(textR.left(), textR.top() + 6, textR.width(), half);
+    const QColor base = selected ? QColor("#89b4fa") : QColor("#cdd6f4");
+    const QColor hi   = selected ? QColor("#f5e0dc") : QColor("#89b4fa");
+    const QString disp =
+        p->fontMetrics().elidedText(item.title, Qt::ElideRight, titleR.width());
+    const int mi = m_kw.isEmpty() ? -1 : disp.indexOf(m_kw, 0, Qt::CaseInsensitive);
+
+    if (mi < 0) {
+        p->setPen(base);
+        p->drawText(titleR, Qt::AlignLeft | Qt::AlignVCenter, disp);
+    } else {
+        int x = titleR.left();
+        auto drawSeg = [&](const QString &s, const QColor &col) {
+            if (s.isEmpty()) return;
+            p->setPen(col);
+            const QRect seg(x, titleR.top(), titleR.right() - x, titleR.height());
+            p->drawText(seg, Qt::AlignLeft | Qt::AlignVCenter, s);
+            x += p->fontMetrics().horizontalAdvance(s);
+        };
+        drawSeg(disp.left(mi), base);
+        drawSeg(disp.mid(mi, m_kw.length()), hi);
+        drawSeg(disp.mid(mi + m_kw.length()), base);
+    }
 
     // 下行：路径（暗色小字，中间省略以保留盘符与文件名）
     QFont sf = opt.font;

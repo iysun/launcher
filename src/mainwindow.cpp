@@ -1,7 +1,9 @@
 #include "mainwindow.h"
 #include "ui/resultdelegate.h"
 #include <QApplication>
+#include <QFrame>
 #include <QHotkey>
+#include <QLayout>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QListWidget>
@@ -28,44 +30,63 @@ void MainWindow::addPlugin(IPlugin *plugin) {
 void MainWindow::setupUi() {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
-    setFixedWidth(kWidth);
 
     auto *root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
-    root->setSpacing(1);
+    root->setSpacing(0);
+    root->setSizeConstraint(QLayout::SetFixedSize);  // 窗口高度始终精确贴合内容
 
-    m_search = new QLineEdit(this);
+    // 整体一张圆角卡片：背景 + 描边 + 圆角都由 card 绘制，
+    // 搜索框与列表透明叠在上面，避免子控件圆角拼接产生缝隙
+    auto *card = new QFrame(this);
+    card->setObjectName("card");
+    card->setFixedWidth(kWidth);
+    card->setStyleSheet(R"(
+        QFrame#card {
+            background: #1e1e2e;
+            border: 1px solid #45475a;
+            border-radius: 10px;
+        }
+    )");
+    root->addWidget(card);
+
+    auto *cardLayout = new QVBoxLayout(card);
+    cardLayout->setContentsMargins(0, 0, 0, 0);
+    cardLayout->setSpacing(0);
+
+    m_search = new QLineEdit(card);
     m_search->setPlaceholderText("搜索应用、文件、命令…");
     m_search->setFixedHeight(kSearchH);
     m_search->setStyleSheet(R"(
         QLineEdit {
-            background: #1e1e2e;
+            background: transparent;
             color: #cdd6f4;
             font-size: 18px;
             padding: 0 16px;
             border: none;
-            border-radius: 10px;
         }
     )");
 
-    m_list = new QListWidget(this);
+    m_list = new QListWidget(card);
     m_list->setFocusPolicy(Qt::StrongFocus);
-    m_list->setItemDelegate(new ResultDelegate(m_list));
+    m_delegate = new ResultDelegate(m_list);
+    m_list->setItemDelegate(m_delegate);
     m_list->setUniformItemSizes(true);
     m_list->setStyleSheet(R"(
         QListWidget {
-            background: #1e1e2e;
+            background: transparent;
             color: #cdd6f4;
             border: none;
-            border-radius: 0 0 10px 10px;
+            border-top: 1px solid #313244;
             font-size: 14px;
             outline: 0;
         }
     )");
+    m_list->viewport()->setAutoFillBackground(false);  // 让卡片底色透出
     m_list->hide();
 
-    root->addWidget(m_search);
-    root->addWidget(m_list);
+    cardLayout->addWidget(m_search);
+    cardLayout->addWidget(m_list);
 
     connect(m_search, &QLineEdit::textChanged, this, &MainWindow::onTextChanged);
     connect(m_list, &QListWidget::itemActivated, this, &MainWindow::onItemActivated);
@@ -104,15 +125,17 @@ void MainWindow::changeEvent(QEvent *e) {
 // ── 搜索与结果 ────────────────────────────────────────────────
 
 void MainWindow::onTextChanged(const QString &text) {
-    if (text.trimmed().isEmpty()) {
+    const QString kw = text.trimmed();
+    if (kw.isEmpty()) {
         m_list->hide();
-        adjustSize();
         return;
     }
 
+    m_delegate->setKeyword(kw);
+
     QList<ResultItem> results;
     for (auto *p : m_plugins)
-        results += p->query(text);
+        results += p->query(kw);
 
     showResults(results);
 }
@@ -122,7 +145,6 @@ void MainWindow::showResults(const QList<ResultItem> &items) {
 
     if (items.isEmpty()) {
         m_list->hide();
-        adjustSize();
         return;
     }
 
@@ -133,10 +155,11 @@ void MainWindow::showResults(const QList<ResultItem> &items) {
         m_list->addItem(li);
     }
 
+    m_list->setCurrentRow(0);  // 默认选中首项，与回车行为一致
+
     int shown = qMin(items.size(), kMaxItems);
-    m_list->setFixedHeight(shown * kItemH);
+    m_list->setFixedHeight(shown * kItemH + 1);  // +1 给顶部分隔线，避免裁掉一行像素
     m_list->show();
-    adjustSize();
 }
 
 void MainWindow::onItemActivated(QListWidgetItem *item) {
@@ -167,7 +190,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e) {
         case Qt::Key_Down:
             if (m_list->count()) {
                 m_list->setFocus();
-                m_list->setCurrentRow(0);
+                // 首项已默认选中，从搜索框下移直接到下一项
+                m_list->setCurrentRow(qMin(1, m_list->count() - 1));
             }
             return true;
         }

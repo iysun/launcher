@@ -6,6 +6,7 @@ class QHotkey;
 class QLineEdit;
 class QListWidget;
 class QListWidgetItem;
+class ResultDelegate;
 
 class MainWindow : public QWidget {
     Q_OBJECT
@@ -27,8 +28,9 @@ private:
     void showResults(const QList<ResultItem> &items);
     void centerOnScreen();
 
-    QLineEdit   *m_search;
-    QListWidget *m_list;
-    QHotkey     *m_hotkey;
+    QLineEdit      *m_search;
+    QListWidget    *m_list;
+    QHotkey        *m_hotkey;
+    ResultDelegate *m_delegate;
     QList<IPlugin *> m_plugins;
 };
