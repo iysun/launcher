@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(git submodule update:*)",
+      "Bash(cmake:*)",
+      "Bash(ctest:*)",
+      "PowerShell(cmake:*)",
+      "PowerShell(git submodule update:*)",
+      "PowerShell(& \"$env:MINGW\\mingw32-make.exe\":*)",
+      "PowerShell(& \"$env:MINGW\\g++.exe\":*)",
+      "PowerShell(& \"$env:QT_DIR\\bin\\windeployqt.exe\":*)",
+      "PowerShell(& \"$env:QT_DIR\\bin\\windeployqt.exe\")"
+    ]
+  }
+}

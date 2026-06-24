@@ -2,11 +2,25 @@
 
 跨平台快速启动器，参考 uTools / PowerToys Run，基于 Qt6 + C++17 实现，优先支持 Windows 和 Linux。
 
-## 维护约定
+## AI 工具（harness 入口）
 
-- 遇到踩坑、限制或架构决策 → 记录到 [docs/notes.md](docs/notes.md)
-- 新增或调整功能需求 → 更新 [docs/features.md](docs/features.md)
-- **先更新文档，再提交代码。**
+本仓库已配好 Claude Code 的项目级工具，优先用它们而非临场拼命令：
+
+| 入口 | 用途 |
+|------|------|
+| `/build` | 构建-修复循环：配置 → 编译 → 读错误对照已知坑修复 → 重编，直到通过 |
+| `/runapp` | 运行-验证循环：启动应用并按清单核对 Alt+Space / 搜索 / 导航等核心交互 |
+| `add-plugin` 技能 | 新插件流水线：生成 IPlugin 骨架 → 注册 CMake/main.cpp → 构建验证 → 文档判断 |
+
+> 构建依赖的本机 Qt/MinGW 路径由 `.claude/settings.local.json` 注入（`QT_DIR` / `MINGW`，不入库，需各自配置）。
+
+## 维护约定（文档）
+
+文档拆成「索引 + 按需读取的细粒度文件」：`docs/notes.md`、`docs/features.md` 是索引，正文在 `docs/notes/`、`docs/features/` 下，一条一文件。
+
+- 改动若涉及**新踩坑 / 限制 / 架构决策** → 判断是否值得沉淀，值得就在 `docs/notes/` 加一篇并在 `docs/notes.md` 索引补一行
+- 改动若**改变了功能边界**（新增 / 调整 / 完成功能）→ 更新 `docs/features.md` 及 `docs/features/` 对应文件
+- **是否更新文档由你按改动性质自行判断**：纯重构、小修小补、不影响行为的改动无需更新；文档与代码可在同一次提交内完成
 
 ---
 
@@ -16,7 +30,7 @@
 |------|---------|------|
 | CMake | ≥ 3.20 | 推荐通过 Scoop / 官网安装 |
 | Qt | 6.x（Widgets 模块）| 见下方安装指引 |
-| 编译器 | **必须与 Qt 二进制配套** | 见 [docs/notes.md](docs/notes.md) |
+| 编译器 | **必须与 Qt 二进制配套** | 见 [docs/notes/mingw-abi-mismatch.md](docs/notes/mingw-abi-mismatch.md) |
 | Git | 任意版本 | 用于拉取子模块 |
 
 ### Qt 安装（推荐用 aqtinstall）
@@ -50,13 +64,13 @@ $MINGW  = "<Qt安装目录>\Tools\mingw1310_64\bin"
 # 初始化子模块（首次克隆后执行一次）
 git submodule update --init
 
-# 配置
+# 配置（每个 -D 参数整体加引号，否则 PowerShell 会把 3.5 吞成 3，报 Invalid value "3"）
 cmake -S . -B build -G "MinGW Makefiles" `
-    -DCMAKE_PREFIX_PATH="$QT_DIR" `
-    -DCMAKE_CXX_COMPILER="$MINGW\g++.exe" `
-    -DCMAKE_MAKE_PROGRAM="$MINGW\mingw32-make.exe" `
-    -DCMAKE_BUILD_TYPE=Release `
-    -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+    "-DCMAKE_PREFIX_PATH=$QT_DIR" `
+    "-DCMAKE_CXX_COMPILER=$MINGW\g++.exe" `
+    "-DCMAKE_MAKE_PROGRAM=$MINGW\mingw32-make.exe" `
+    "-DCMAKE_BUILD_TYPE=Release" `
+    "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
 
 # 编译
 & "$MINGW\mingw32-make.exe" -C build -j8

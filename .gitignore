@@ -36,3 +36,6 @@ qrc_*.cpp
 
 # FetchContent cache
 _deps/
+
+# Claude Code — 机器相关的本地配置（含本机 Qt/MinGW 路径），不入库
+.claude/settings.local.json
