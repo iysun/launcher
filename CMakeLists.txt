@@ -16,6 +16,7 @@ add_subdirectory(third_party/QHotkey)
 qt_add_executable(launcher
     src/main.cpp
     src/mainwindow.cpp
+    src/core/matcher.cpp
     src/plugins/appplugin.cpp
     src/ui/resultdelegate.cpp
 )

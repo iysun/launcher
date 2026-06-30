@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui/resultdelegate.h"
+#include <algorithm>
 #include <QApplication>
 #include <QCursor>
 #include <QFrame>
@@ -146,6 +147,15 @@ void MainWindow::onTextChanged(const QString &text) {
             item.owner = p;  // 标记产出插件，execute 时只路由给它
         results += r;
     }
+
+    // 跨插件统一排序：分数高者优先，同分按标题字母序稳定排序
+    std::stable_sort(results.begin(), results.end(),
+                     [](const ResultItem &a, const ResultItem &b) {
+                         if (a.score != b.score) return a.score > b.score;
+                         return a.title.compare(b.title, Qt::CaseInsensitive) < 0;
+                     });
+    if (results.size() > kMaxItems)
+        results = results.mid(0, kMaxItems);
 
     showResults(results);
 }

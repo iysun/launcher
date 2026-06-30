@@ -11,6 +11,7 @@ struct ResultItem {
     QString  action;          // 执行路径或命令
     QIcon    icon;
     IPlugin *owner = nullptr;  // 产出该结果的插件，由 MainWindow 收集时标记
+    int      score = 0;        // 匹配分，插件填写，MainWindow 据此跨插件统一排序
 };
 
 Q_DECLARE_METATYPE(ResultItem)
