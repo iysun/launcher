@@ -1,6 +1,8 @@
 #include "ui/resultdelegate.h"
+#include "core/matcher.h"
 #include "plugin/resultitem.h"
 #include <QPainter>
+#include <QSet>
 
 static constexpr int kPad  = 16;  // 左右边距
 static constexpr int kIcon = 32;  // 图标边长
@@ -42,12 +44,14 @@ void ResultDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt,
     const QColor hi   = selected ? QColor("#f5e0dc") : QColor("#89b4fa");
     const QString disp =
         p->fontMetrics().elidedText(item.title, Qt::ElideRight, titleR.width());
-    const int mi = m_kw.isEmpty() ? -1 : disp.indexOf(m_kw, 0, Qt::CaseInsensitive);
+    // 命中位置在实际绘制的 disp 上计算，兼容子串与子序列（非连续）两种命中
+    const QList<int> hits = Matcher::matchedPositions(disp, m_kw);
 
-    if (mi < 0) {
+    if (hits.isEmpty()) {
         p->setPen(base);
         p->drawText(titleR, Qt::AlignLeft | Qt::AlignVCenter, disp);
     } else {
+        const QSet<int> hitSet(hits.begin(), hits.end());
         int x = titleR.left();
         auto drawSeg = [&](const QString &s, const QColor &col) {
             if (s.isEmpty()) return;
@@ -56,9 +60,16 @@ void ResultDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt,
             p->drawText(seg, Qt::AlignLeft | Qt::AlignVCenter, s);
             x += p->fontMetrics().horizontalAdvance(s);
         };
-        drawSeg(disp.left(mi), base);
-        drawSeg(disp.mid(mi, m_kw.length()), hi);
-        drawSeg(disp.mid(mi + m_kw.length()), base);
+        // 把 disp 切成「命中 / 非命中」交替的连续段，逐段着色
+        int i = 0;
+        while (i < disp.length()) {
+            const bool hit = hitSet.contains(i);
+            int j = i;
+            while (j < disp.length() && hitSet.contains(j) == hit)
+                ++j;
+            drawSeg(disp.mid(i, j - i), hit ? hi : base);
+            i = j;
+        }
     }
 
     // 下行：路径（暗色小字，中间省略以保留盘符与文件名）
