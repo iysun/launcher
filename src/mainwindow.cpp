@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <QApplication>
 #include <QCursor>
+#include <QFutureWatcher>
+#include <QtConcurrentRun>
 #include <QFrame>
 #include <QGuiApplication>
 #include <QHotkey>
@@ -69,7 +71,7 @@ void MainWindow::setupUi() {
     cardLayout->setSpacing(0);
 
     m_search = new QLineEdit(card);
-    m_search->setPlaceholderText("搜索…");
+    m_search->setPlaceholderText("输入关键词搜索, /help 获取帮助");
     m_search->setFixedHeight(kSearchH);
     m_search->setStyleSheet(R"(
         QLineEdit {
@@ -153,9 +155,8 @@ void MainWindow::onTextChanged(const QString &text) {
     m_queryTimer->start();  // 连续输入只在停顿 kQueryDebounceMs 后查询一次
 }
 
-// 防抖到期后执行。此处是将来把耗时插件查询挪到工作线程的接缝点：
-// 现阶段插件均为内存级即时查询，故同步执行；待 FilePlugin 等慢插件落地，
-// 再在这里改为异步回调 + 失效代次丢弃旧结果。
+// 防抖到期后执行。同步插件（应用/命令）即时收集并展示；异步插件（文件搜索）派发到
+// 工作线程，结果回来再合并重排。每次查询自增代次，异步回调据此丢弃过期结果。
 void MainWindow::runQuery() {
     if (!isVisible()) return;  // 窗口已隐藏则无需查询
 
@@ -167,6 +168,9 @@ void MainWindow::runQuery() {
 
     m_delegate->setKeyword(kw);
 
+    const int gen = ++m_queryGen;  // 本次查询代次
+    m_asyncResults.clear();        // 上一代次的异步结果作废
+
     // 输入命中某个前缀插件时，抑制全局插件，避免应用结果污染命令/文件视图
     bool prefixActive = false;
     for (auto *p : m_plugins) {
@@ -174,7 +178,7 @@ void MainWindow::runQuery() {
         if (!pre.isEmpty() && kw.startsWith(pre)) { prefixActive = true; break; }
     }
 
-    QList<ResultItem> results;
+    QList<ResultItem> sync;
     for (auto *p : m_plugins) {
         const QString prefix = p->triggerPrefix();
         QString sub;
@@ -188,13 +192,47 @@ void MainWindow::runQuery() {
         } else {
             continue;  // 前缀不匹配，跳过该插件
         }
-        QList<ResultItem> r = p->query(sub);
-        for (ResultItem &item : r) {
-            item.owner  = p;  // 标记产出插件，execute 时只路由给它
-            item.score += m_usage->frecencyBonus(item.action);  // 常用项同档内上浮
+
+        if (p->runsAsync()) {
+            // 派发到线程池；finished 回调在主线程执行，先校验代次再合并
+            auto *w = new QFutureWatcher<QList<ResultItem>>(this);
+            connect(w, &QFutureWatcher<QList<ResultItem>>::finished, this,
+                    [this, w, p, gen] {
+                        const QList<ResultItem> r = w->result();
+                        w->deleteLater();
+                        if (gen != m_queryGen || !isVisible()) return;  // 过期/已隐藏则弃
+                        onAsyncResults(p, r);
+                    });
+            const QString subCopy = sub;  // 值捕获，跨线程安全
+            w->setFuture(QtConcurrent::run([p, subCopy] { return p->query(subCopy); }));
+        } else {
+            QList<ResultItem> r = p->query(sub);
+            for (ResultItem &item : r) {
+                item.owner  = p;  // 标记产出插件，execute 时只路由给它
+                item.score += m_usage->frecencyBonus(item.action);  // 常用项同档内上浮
+            }
+            sync += r;
         }
-        results += r;
     }
+
+    m_baseResults = sync;
+    mergeAndShow();  // 先展示同步结果（应用/命令即时可见），异步结果稍后流入
+}
+
+// 异步结果到达（已过代次/可见性校验）：打 owner+frecency，累积后重新合并展示
+void MainWindow::onAsyncResults(IPlugin *p, const QList<ResultItem> &r) {
+    QList<ResultItem> tagged = r;
+    for (ResultItem &item : tagged) {
+        item.owner  = p;
+        item.score += m_usage->frecencyBonus(item.action);
+    }
+    m_asyncResults += tagged;
+    mergeAndShow();
+}
+
+// 合并同步+异步结果，统一排序、截断，再对将展示的项做主线程装饰（补图标等）
+void MainWindow::mergeAndShow() {
+    QList<ResultItem> results = m_baseResults + m_asyncResults;
 
     // 跨插件统一排序：分数高者优先，同分按标题字母序稳定排序
     std::stable_sort(results.begin(), results.end(),
@@ -204,6 +242,10 @@ void MainWindow::runQuery() {
                      });
     if (results.size() > kMaxItems)
         results = results.mid(0, kMaxItems);
+
+    // 仅对最终展示的 ≤kMaxItems 条装饰：异步插件借此在主线程补图标（不可跨线程）
+    for (ResultItem &item : results)
+        if (item.owner) item.owner->decorate(item);
 
     showResults(results);
 }

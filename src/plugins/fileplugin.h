@@ -7,7 +7,9 @@ class FilePlugin : public IPlugin {
 public:
     QString           name()  const override { return "Files"; }
     QString           triggerPrefix() const override { return "@"; }
-    QList<ResultItem> query(const QString &keyword) override;
+    bool              runsAsync() const override { return true; }   // 遍历挪到工作线程，不阻塞 UI
+    QList<ResultItem> query(const QString &keyword) override;       // 工作线程执行，不取图标
+    void              decorate(ResultItem &item) override;          // 主线程按路径补图标
     void              execute(const ResultItem &item) override;     // 默认程序打开文件
     void              executeAlt(const ResultItem &item) override;  // Ctrl+Enter：打开所在目录
 

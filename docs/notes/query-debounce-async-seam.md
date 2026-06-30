@@ -25,12 +25,21 @@
 改为 `QtConcurrent::run` + `QFutureWatcher` 回调，并用代次计数器丢弃过期结果，
 同时为可重入的插件约定线程安全契约。
 
-## 更新：FilePlugin 已落地，但仍走同步路径
+## 更新：异步路径已落地（FilePlugin）
 
-FilePlugin（`@` 文件搜索）已实现，却**没有**借此上线程化：它用访问数上限
-（`kMaxVisit`）把同步遍历的耗时压到可接受范围，见
-[FilePlugin 同步遍历的访问上限兜底](fileplugin-bounded-scan.md)。本节描述的
-`QtConcurrent` + 失效代次方案仍是未来的正解，待目录规模成为实际痛点时再做。
+本节规划的方案已实现，`@` 文件搜索的遍历已挪到工作线程。三件套：
+
+- **`IPlugin::runsAsync()`**：插件声明 query 需异步（FilePlugin 返回 true）。
+  MainWindow 在 `runQuery()` 里据此把该插件的 `query` 用 `QtConcurrent::run`
+  派发到线程池，同步插件（App/Command）仍即时执行、先行展示。
+- **失效代次**：`m_queryGen` 每次查询自增，`QFutureWatcher::finished`（主线程）
+  回调先比对代次与 `isVisible()`，过期/已隐藏直接丢弃，连打字不会让旧结果乱入。
+- **`IPlugin::decorate()`（主线程装饰）**：`QFileIconProvider::icon()` 内部建
+  `QPixmap`，**不能在工作线程调用**。故 query 在工作线程只产出无图标结果，图标由
+  MainWindow 在主线程、且**只对最终展示的 ≤kMaxItems 条**调 `decorate` 补齐。
+
+`kMaxVisit` 上限仍保留，作为后台遍历的兜底，见
+[FilePlugin 同步遍历的访问上限兜底](fileplugin-bounded-scan.md)。
 
 ## 正确做法（给后续实现者）
 

@@ -28,11 +28,12 @@ QStringList FilePlugin::searchRoots() {
     return roots;
 }
 
+// 注意：本函数在工作线程执行（runsAsync），只读 QStandardPaths + 遍历文件名 + 打分，
+// 无共享可变状态，可重入。**不要**在此创建 QIcon/QPixmap（仅限 GUI 线程）——图标交 decorate 补。
 QList<ResultItem> FilePlugin::query(const QString &keyword) {
     const QString kw = keyword.trimmed();
     if (kw.isEmpty()) return {};
 
-    static QFileIconProvider iconProvider;  // QApplication 已存在，安全
     QList<ResultItem> results;
     int visited = 0;
 
@@ -41,7 +42,7 @@ QList<ResultItem> FilePlugin::query(const QString &keyword) {
                         QDirIterator::Subdirectories);
         while (it.hasNext()) {
             it.next();
-            if (++visited > kMaxVisit) return results;  // 访问上限，早退避免卡死
+            if (++visited > kMaxVisit) return results;  // 访问上限，早退避免后台堆积
 
             const QFileInfo fi = it.fileInfo();
             const int s = Matcher::score(fi.fileName(), kw);
@@ -51,13 +52,18 @@ QList<ResultItem> FilePlugin::query(const QString &keyword) {
             item.title    = fi.fileName();
             item.subtitle = fi.absoluteFilePath();
             item.action   = fi.absoluteFilePath();
-            item.icon     = iconProvider.icon(fi);
             item.score    = s;
             results.append(item);
             if (results.size() >= kMaxResults) return results;
         }
     }
     return results;
+}
+
+// 主线程调用：仅对将展示的结果按路径补图标（QFileIconProvider 内部建 QPixmap，须在 GUI 线程）
+void FilePlugin::decorate(ResultItem &item) {
+    static QFileIconProvider iconProvider;
+    item.icon = iconProvider.icon(QFileInfo(item.action));
 }
 
 void FilePlugin::execute(const ResultItem &item) {

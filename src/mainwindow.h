@@ -30,6 +30,8 @@ private slots:
 private:
     void setupUi();
     void showResults(const QList<ResultItem> &items);
+    void mergeAndShow();  // 合并 base+async → 排序 → 截断 → 主线程装饰 → 展示
+    void onAsyncResults(IPlugin *p, const QList<ResultItem> &r);  // 异步结果到达（已过代次校验）
     void centerOnScreen();
     void flushPendingQuery();  // 回车前冲刷防抖，确保作用于最新关键词的结果
     void activate(QListWidgetItem *item, bool alt);  // alt=Ctrl+Enter 触发次级动作
@@ -44,4 +46,8 @@ private:
     UsageStore     *m_usage;
     QString          m_pendingKeyword;  // 防抖期间暂存的查询词
     QList<IPlugin *> m_plugins;
+
+    int               m_queryGen = 0;   // 查询代次，异步回调据此丢弃过期结果
+    QList<ResultItem> m_baseResults;    // 当前代次的同步插件结果
+    QList<ResultItem> m_asyncResults;   // 当前代次累积的异步结果
 };

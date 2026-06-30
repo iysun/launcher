@@ -9,7 +9,7 @@ set(CMAKE_AUTORCC ON)
 # 导出 compile_commands.json，供 clangd / eglot / vscode 提供跳转、补全、诊断
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets Test)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Test Concurrent)
 
 add_subdirectory(third_party/QHotkey)
 
@@ -25,7 +25,7 @@ qt_add_executable(launcher
 )
 
 target_include_directories(launcher PRIVATE src)
-target_link_libraries(launcher PRIVATE Qt6::Widgets qhotkey)
+target_link_libraries(launcher PRIVATE Qt6::Widgets Qt6::Concurrent qhotkey)
 
 # MinGW 不像 MSVC 自动链接 COM 库，需显式链接（IShellLink / CLSID_ShellLink）
 if(WIN32)
