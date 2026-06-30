@@ -2,8 +2,10 @@
 #include "core/matcher.h"
 #include <QDir>
 #include <QFileInfo>
+#include <QFileSystemWatcher>
 #include <QProcess>
 #include <QStandardPaths>
+#include <QTimer>
 
 #ifdef Q_OS_WIN
 #  include <QFileIconProvider>
@@ -12,8 +14,27 @@
 #  include <windows.h>
 #endif
 
+static constexpr int kReloadDebounceMs = 500;  // 装/卸应用会触发多次目录变更，合并后再重扫
+
 AppPlugin::AppPlugin() {
+    m_watcher = new QFileSystemWatcher(this);
+
+    m_reloadTimer = new QTimer(this);
+    m_reloadTimer->setSingleShot(true);
+    m_reloadTimer->setInterval(kReloadDebounceMs);
+    connect(m_reloadTimer, &QTimer::timeout, this, &AppPlugin::loadApps);
+    // 目录变更先攒进去抖定时器，停顿后只重扫一次
+    connect(m_watcher, &QFileSystemWatcher::directoryChanged,
+            m_reloadTimer, qOverload<>(&QTimer::start));
+
     loadApps();
+}
+
+// 用最新目录集替换 watcher 的监听列表（先清旧再加新，避免重扫后残留已删目录）
+void AppPlugin::updateWatch(const QStringList &dirs) {
+    const QStringList old = m_watcher->directories();
+    if (!old.isEmpty()) m_watcher->removePaths(old);
+    if (!dirs.isEmpty()) m_watcher->addPaths(dirs);
 }
 
 QList<ResultItem> AppPlugin::query(const QString &keyword) {
@@ -72,9 +93,11 @@ static QString resolveLnk(const QString &lnkPath) {
     return result;
 }
 
-static void scanDir(const QString &path, QList<ResultItem> &out) {
+static void scanDir(const QString &path, QList<ResultItem> &out, QStringList &watch) {
     static QFileIconProvider iconProvider;  // QApplication 已存在，安全
     QDir dir(path);
+    if (!dir.exists()) return;
+    watch.append(path);  // 监听本目录，子目录新增/删除（即装卸应用）会触发重扫
     for (const QFileInfo &fi : dir.entryInfoList({"*.lnk"}, QDir::Files)) {
         ResultItem item;
         item.title = fi.completeBaseName();
@@ -89,19 +112,22 @@ static void scanDir(const QString &path, QList<ResultItem> &out) {
         out.append(item);
     }
     for (const QString &sub : dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot))
-        scanDir(path + "/" + sub, out);
+        scanDir(path + "/" + sub, out, watch);
 }
 
 void AppPlugin::loadApps() {
+    m_apps.clear();
     const bool comOk = SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
     const QStringList roots = {
         QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation),
         "C:/ProgramData/Microsoft/Windows/Start Menu/Programs"
     };
+    QStringList watch;
     for (const QString &root : roots)
-        scanDir(root, m_apps);
+        scanDir(root, m_apps, watch);
     if (comOk)
         CoUninitialize();
+    updateWatch(watch);
 }
 
 #else
@@ -132,11 +158,15 @@ static ResultItem parseDesktop(const QString &path) {
 }
 
 void AppPlugin::loadApps() {
+    m_apps.clear();
     const QStringList dirs = {
         "/usr/share/applications",
         QDir::homePath() + "/.local/share/applications"
     };
+    QStringList watch;
     for (const QString &d : dirs) {
+        if (!QDir(d).exists()) continue;
+        watch.append(d);
         for (const QFileInfo &fi : QDir(d).entryInfoList({"*.desktop"}, QDir::Files)) {
             ResultItem item = parseDesktop(fi.absoluteFilePath());
             if (!item.title.isEmpty() && !item.action.isEmpty()) {
@@ -145,5 +175,6 @@ void AppPlugin::loadApps() {
             }
         }
     }
+    updateWatch(watch);
 }
 #endif
