@@ -122,23 +122,31 @@ ctest --preset windows   # 或 linux
 ```
 src/
 ├── main.cpp
-├── mainwindow.h / .cpp     # 无边框悬浮窗，Alt+Space 唤起/隐藏，失焦自动隐藏
+├── mainwindow.h / .cpp         # 无边框悬浮窗，全局热键唤起/隐藏，失焦自动隐藏，系统托盘
 ├── core/
-│   └── matcher.h / .cpp    # 共享匹配/打分（子串四档 + 子序列模糊），跨插件统一排序的依据
+│   ├── matcher.h / .cpp        # 共享匹配/打分（子串四档 + 子序列模糊），跨插件统一排序的依据
+│   ├── pinyin.h / .cpp         # CJK → 拼音转换，支持全拼/首字母搜索
+│   ├── usagestore.h / .cpp     # frecency 持久化（usage.json）
+│   └── appsettings.h / .cpp    # 用户配置持久化（settings.json）：热键、开机自启、插件启停
 ├── plugin/
-│   ├── iplugin.h           # IPlugin 接口（含 triggerPrefix 前缀路由）
-│   └── resultitem.h        # ResultItem 数据结构（含 owner / score，已注册 QMetaType）
+│   ├── iplugin.h               # IPlugin 接口（含 triggerPrefix 前缀路由）
+│   └── resultitem.h            # ResultItem 数据结构（含 owner / score，已注册 QMetaType）
 ├── plugins/
-│   └── appplugin.h / .cpp  # 内置应用搜索插件
+│   ├── appplugin.h / .cpp      # 应用搜索（Start Menu .lnk / .desktop，拼音匹配）
+│   ├── commandplugin.h / .cpp  # "/" 前缀命令插件（通用注册表，main.cpp 装配动作）
+│   └── fileplugin.h / .cpp     # "@" 前缀文件搜索（异步，QtConcurrent）
 └── ui/
-    └── resultdelegate.h / .cpp  # 结果项绘制（图标 + 两行 + 命中高亮）
+    ├── resultdelegate.h / .cpp  # 结果项绘制（图标 + 两行 + 命中高亮）
+    ├── settingsdialog.h / .cpp  # 设置对话框（热键/自启/插件启停，Catppuccin 风格）
+    ├── hotkeyedit.h / .cpp      # 热键录制控件（WH_KEYBOARD_LL 低级钩子，支持系统保留键）
+    └── helpdialog.h / .cpp      # 帮助对话框（快捷键/前缀/命令三区，替代 QMessageBox）
 tests/
-└── test_matcher.cpp        # Matcher 单测（Qt Test，ctest 运行）
+└── test_matcher.cpp            # Matcher 单测（Qt Test，ctest 运行）
 third_party/
-└── QHotkey/                # Git submodule，跨平台全局热键库
+└── QHotkey/                    # Git submodule，跨平台全局热键库
 docs/
-├── notes.md                # 踩坑与注意事项
-└── features.md             # 功能规划
+├── notes.md                    # 踩坑与注意事项（索引）
+└── features.md                 # 功能规划（索引）
 ```
 
 **数据流：** 搜索框输入 → 防抖（停顿 ~100ms）→ 按 `triggerPrefix` 路由到匹配的插件（前缀已剥离）→ `IPlugin::query` → 跨插件统一打分排序（含 frecency）、截断 → 结果列表 → 用户回车 → 仅**产出该结果的插件** `IPlugin::execute`（`Ctrl+Enter` 则 `executeAlt`）→ 隐藏窗口
