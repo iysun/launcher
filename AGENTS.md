@@ -106,6 +106,15 @@ cmake --build --preset linux
 #   export CMAKE_PREFIX_PATH="<Qt安装目录>/6.8.3/gcc_64"
 ```
 
+### 运行测试
+
+```bash
+ctest --preset windows   # 或 linux
+```
+
+> Windows 上 test preset 已把 `QT_DIR\bin` 与 `MINGW` 注入测试进程的 PATH，
+> 否则 `matcher_test.exe` 找不到 Qt/MinGW 运行库会以 `0xC0000135` 退出。
+
 ---
 
 ## 项目结构
@@ -114,11 +123,17 @@ cmake --build --preset linux
 src/
 ├── main.cpp
 ├── mainwindow.h / .cpp     # 无边框悬浮窗，Alt+Space 唤起/隐藏，失焦自动隐藏
+├── core/
+│   └── matcher.h / .cpp    # 共享匹配/打分（子串四档 + 子序列模糊），跨插件统一排序的依据
 ├── plugin/
-│   ├── iplugin.h           # IPlugin 接口
-│   └── resultitem.h        # ResultItem 数据结构（已注册 QMetaType）
-└── plugins/
-    └── appplugin.h / .cpp  # 内置应用搜索插件
+│   ├── iplugin.h           # IPlugin 接口（含 triggerPrefix 前缀路由）
+│   └── resultitem.h        # ResultItem 数据结构（含 owner / score，已注册 QMetaType）
+├── plugins/
+│   └── appplugin.h / .cpp  # 内置应用搜索插件
+└── ui/
+    └── resultdelegate.h / .cpp  # 结果项绘制（图标 + 两行 + 命中高亮）
+tests/
+└── test_matcher.cpp        # Matcher 单测（Qt Test，ctest 运行）
 third_party/
 └── QHotkey/                # Git submodule，跨平台全局热键库
 docs/

@@ -52,5 +52,24 @@
       "name": "linux",
       "configurePreset": "linux"
     }
+  ],
+  "testPresets": [
+    {
+      "name": "windows",
+      "configurePreset": "windows",
+      "output": {
+        "outputOnFailure": true
+      },
+      "environment": {
+        "PATH": "$env{QT_DIR}\\bin;$env{MINGW};$penv{PATH}"
+      }
+    },
+    {
+      "name": "linux",
+      "configurePreset": "linux",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
   ]
 }
