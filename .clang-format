@@ -1,0 +1,31 @@
+# 贴合现有代码风格：4 空格缩进、指针右对齐、连续声明/赋值对齐、
+# 大括号 Attach、类内短函数单行。本文件随 C3 引入；既有文件未做整体重排，
+# 以免与后续功能 commit 冲突，新代码按此配置书写即可。
+---
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: c++17
+
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 90
+
+PointerAlignment: Right
+DerivePointerAlignment: false
+
+# 现有代码大量手动对齐连续的声明与赋值，保留之
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+
+BreakBeforeBraces: Attach
+AllowShortFunctionsOnASingleLine: Inline
+# 现有代码 if / else-if 常把语句写在同行，且有 { a; b; } 单行块，保留之
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: false
+IndentCaseLabels: false
+
+AccessModifierOffset: -4
+NamespaceIndentation: None
+SortIncludes: false
