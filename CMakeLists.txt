@@ -13,7 +13,7 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets Test Concurrent)
 
 add_subdirectory(third_party/QHotkey)
 
-qt_add_executable(launcher
+qt_add_executable(launcher WIN32
     src/main.cpp
     src/mainwindow.cpp
     src/core/matcher.cpp
