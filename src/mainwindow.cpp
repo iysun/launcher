@@ -14,7 +14,11 @@
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QMenu>
+#include <QPainter>
+#include <QPixmap>
 #include <QScreen>
+#include <QSystemTrayIcon>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -45,6 +49,25 @@ MainWindow::MainWindow(AppSettings *settings, QWidget *parent)
             m_hotkey->setShortcut(QKeySequence(seq), true);
         });
     }
+
+    // ── 系统托盘 ──────────────────────────────────────────────
+    m_tray = new QSystemTrayIcon(this);
+    m_tray->setIcon(makeTrayIcon());
+    m_tray->setToolTip("Launcher");
+
+    auto *trayMenu = new QMenu();
+    trayMenu->addAction("显示 / 隐藏", this, &MainWindow::toggle);
+    trayMenu->addSeparator();
+    trayMenu->addAction("退出", qApp, &QApplication::quit);
+    m_tray->setContextMenu(trayMenu);
+
+    connect(m_tray, &QSystemTrayIcon::activated, this,
+            [this](QSystemTrayIcon::ActivationReason reason) {
+                if (reason == QSystemTrayIcon::DoubleClick)
+                    toggle();
+            });
+
+    m_tray->show();
 }
 
 void MainWindow::addPlugin(IPlugin *plugin) {
@@ -52,6 +75,21 @@ void MainWindow::addPlugin(IPlugin *plugin) {
 }
 
 // ── UI ────────────────────────────────────────────────────────
+
+QIcon MainWindow::makeTrayIcon() {
+    // 放大镜图标：Catppuccin blue 圆圈 + 把手，深色背景透明
+    QPixmap pix(32, 32);
+    pix.fill(Qt::transparent);
+    QPainter p(&pix);
+    p.setRenderHint(QPainter::Antialiasing);
+
+    const QColor blue("#89b4fa");
+    p.setPen(QPen(blue, 2.5));
+    p.setBrush(Qt::NoBrush);
+    p.drawEllipse(QRectF(4, 4, 16, 16));       // 镜圈
+    p.drawLine(QLineF(17.5, 17.5, 26, 26));    // 把手
+    return QIcon(pix);
+}
 
 void MainWindow::setupUi() {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);

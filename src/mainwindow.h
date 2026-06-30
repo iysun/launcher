@@ -8,6 +8,7 @@ class QKeyEvent;
 class QLineEdit;
 class QListWidget;
 class QListWidgetItem;
+class QSystemTrayIcon;
 class QTimer;
 class ResultDelegate;
 class UsageStore;
@@ -30,7 +31,8 @@ private slots:
     void toggle();
 
 private:
-    void setupUi();
+    void   setupUi();
+    QIcon  makeTrayIcon();
     void showResults(const QList<ResultItem> &items);
     void mergeAndShow();  // 合并 base+async → 排序 → 截断 → 主线程装饰 → 展示
     void onAsyncResults(IPlugin *p, const QList<ResultItem> &r);  // 异步结果到达（已过代次校验）
@@ -40,13 +42,14 @@ private:
     bool handleEmacsKey(QKeyEvent *key);  // Emacs 风格键位，消费则返回 true
     void moveSelection(int delta);        // 移动列表选中项（焦点不离开搜索框）
 
-    QLineEdit      *m_search;
-    QListWidget    *m_list;
-    QHotkey        *m_hotkey;
-    QTimer         *m_queryTimer;
-    ResultDelegate *m_delegate;
-    UsageStore     *m_usage;
-    AppSettings    *m_settings;
+    QLineEdit         *m_search;
+    QListWidget       *m_list;
+    QHotkey           *m_hotkey;
+    QSystemTrayIcon   *m_tray;
+    QTimer            *m_queryTimer;
+    ResultDelegate    *m_delegate;
+    UsageStore        *m_usage;
+    AppSettings       *m_settings;
     QString          m_pendingKeyword;  // 防抖期间暂存的查询词
     QList<IPlugin *> m_plugins;
 
