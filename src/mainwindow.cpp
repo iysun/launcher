@@ -140,8 +140,12 @@ void MainWindow::onTextChanged(const QString &text) {
     m_delegate->setKeyword(kw);
 
     QList<ResultItem> results;
-    for (auto *p : m_plugins)
-        results += p->query(kw);
+    for (auto *p : m_plugins) {
+        QList<ResultItem> r = p->query(kw);
+        for (ResultItem &item : r)
+            item.owner = p;  // 标记产出插件，execute 时只路由给它
+        results += r;
+    }
 
     showResults(results);
 }
@@ -171,8 +175,8 @@ void MainWindow::showResults(const QList<ResultItem> &items) {
 void MainWindow::onItemActivated(QListWidgetItem *item) {
     if (!item) return;
     auto result = item->data(Qt::UserRole).value<ResultItem>();
-    for (auto *p : m_plugins)
-        p->execute(result);
+    if (result.owner)  // 只让产出该结果的插件执行，互不串扰
+        result.owner->execute(result);
     hide();
 }
 
