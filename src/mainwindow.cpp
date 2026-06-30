@@ -250,11 +250,65 @@ void MainWindow::activate(QListWidgetItem *item, bool alt) {
 
 // ── 键盘导航 ──────────────────────────────────────────────────
 
+// 移动列表选中项（带钳制），焦点保持在搜索框
+void MainWindow::moveSelection(int delta) {
+    const int n = m_list->count();
+    if (n == 0) return;
+    const int row = qBound(0, m_list->currentRow() + delta, n - 1);
+    m_list->setCurrentRow(row);
+}
+
+// Emacs 风格键位（Ctrl/Alt 组合；Ctrl+Enter 不在此处理，仍交回 Enter 分支做次级动作）
+bool MainWindow::handleEmacsKey(QKeyEvent *key) {
+    const Qt::KeyboardModifiers mods = key->modifiers();
+
+    // 导航/取消（纯 Ctrl）：搜索框/列表两种焦点都生效
+    if (mods == Qt::ControlModifier) {
+        switch (key->key()) {
+        case Qt::Key_N: moveSelection(+1); return true;  // 下一项
+        case Qt::Key_P: moveSelection(-1); return true;  // 上一项
+        case Qt::Key_G: hide();            return true;  // 取消（等同 Esc）
+        }
+    }
+
+    // 以下为搜索框行内编辑，仅当搜索框获焦时作用于它，避免列表获焦时误改文本
+    if (!m_search->hasFocus())
+        return false;
+
+    if (mods == Qt::ControlModifier) {
+        switch (key->key()) {
+        case Qt::Key_A: m_search->home(false);           return true;  // 行首
+        case Qt::Key_E: m_search->end(false);            return true;  // 行尾
+        case Qt::Key_F: m_search->cursorForward(false);  return true;  // 前移一字符
+        case Qt::Key_B: m_search->cursorBackward(false); return true;  // 后移一字符
+        case Qt::Key_D: m_search->del();                 return true;  // 删后一字符
+        case Qt::Key_K:                                                // kill 到行尾
+            m_search->end(true);
+            m_search->del();
+            return true;
+        }
+    } else if (mods == Qt::AltModifier) {  // Meta：词移动 / 删词
+        switch (key->key()) {
+        case Qt::Key_F: m_search->cursorWordForward(false);  return true;   // 前移一词
+        case Qt::Key_B: m_search->cursorWordBackward(false); return true;   // 后移一词
+        case Qt::Key_D:                                                     // 删后一词
+            m_search->deselect();               // 清残留选区，确保只删一个词
+            m_search->cursorWordForward(true);  // 从光标选到下一词尾
+            m_search->del();
+            return true;
+        }
+    }
+    return false;
+}
+
 bool MainWindow::eventFilter(QObject *obj, QEvent *e) {
     if (e->type() != QEvent::KeyPress)
         return QWidget::eventFilter(obj, e);
 
     auto *key = static_cast<QKeyEvent *>(e);
+
+    if (handleEmacsKey(key))  // Emacs 键位对搜索框/列表两种焦点都生效
+        return true;
 
     if (obj == m_search) {
         switch (key->key()) {
@@ -262,11 +316,14 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e) {
             hide();
             return true;
         case Qt::Key_Return:
-        case Qt::Key_Enter:
+        case Qt::Key_Enter: {
             flushPendingQuery();  // 确保作用于最新关键词的结果
-            activate(m_list->count() ? m_list->item(0) : nullptr,
-                     key->modifiers() & Qt::ControlModifier);
+            // 取当前选中项（C-n/C-p 在搜索框内移动后仍正确），无则回退首项
+            QListWidgetItem *target = m_list->currentItem();
+            if (!target && m_list->count()) target = m_list->item(0);
+            activate(target, key->modifiers() & Qt::ControlModifier);
             return true;
+        }
         case Qt::Key_Down:
             if (m_list->count()) {
                 m_list->setFocus();

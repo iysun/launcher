@@ -3,6 +3,7 @@
 #include <QWidget>
 
 class QHotkey;
+class QKeyEvent;
 class QLineEdit;
 class QListWidget;
 class QListWidgetItem;
@@ -32,6 +33,8 @@ private:
     void centerOnScreen();
     void flushPendingQuery();  // 回车前冲刷防抖，确保作用于最新关键词的结果
     void activate(QListWidgetItem *item, bool alt);  // alt=Ctrl+Enter 触发次级动作
+    bool handleEmacsKey(QKeyEvent *key);  // Emacs 风格键位，消费则返回 true
+    void moveSelection(int delta);        // 移动列表选中项（焦点不离开搜索框）
 
     QLineEdit      *m_search;
     QListWidget    *m_list;
