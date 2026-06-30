@@ -134,7 +134,8 @@ src/
 ├── plugins/
 │   ├── appplugin.h / .cpp      # 应用搜索（Start Menu .lnk / .desktop，拼音匹配）
 │   ├── commandplugin.h / .cpp  # "/" 前缀命令插件（通用注册表，main.cpp 装配动作）
-│   └── fileplugin.h / .cpp     # "@" 前缀文件搜索（异步，QtConcurrent）
+│   ├── fileplugin.h / .cpp     # "@" 前缀文件搜索（异步，QtConcurrent）
+│   └── webplugin.h / .cpp      # "?" 前缀网页搜索（Google/Bing/Baidu/GitHub）
 └── ui/
     ├── resultdelegate.h / .cpp  # 结果项绘制（图标 + 两行 + 命中高亮）
     ├── settingsdialog.h / .cpp  # 设置对话框（热键/自启/插件启停，Catppuccin 风格）
