@@ -19,6 +19,8 @@ qt_add_executable(launcher
     src/core/matcher.cpp
     src/core/usagestore.cpp
     src/plugins/appplugin.cpp
+    src/plugins/commandplugin.cpp
+    src/plugins/fileplugin.cpp
     src/ui/resultdelegate.cpp
 )
 

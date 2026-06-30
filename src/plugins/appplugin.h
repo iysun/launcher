@@ -18,6 +18,8 @@ public:
     void              execute(const ResultItem &item) override;
     void              executeAlt(const ResultItem &item) override;  // Ctrl+Enter：复制路径
 
+    void              reload() { loadApps(); }  // 供 CommandPlugin 的 /reload 命令触发
+
 private:
     void loadApps();                            // 全量重扫 m_apps 并刷新监听目录
     void updateWatch(const QStringList &dirs);  // 用最新目录集替换 watcher 监听

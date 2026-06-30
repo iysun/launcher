@@ -25,6 +25,13 @@
 改为 `QtConcurrent::run` + `QFutureWatcher` 回调，并用代次计数器丢弃过期结果，
 同时为可重入的插件约定线程安全契约。
 
+## 更新：FilePlugin 已落地，但仍走同步路径
+
+FilePlugin（`@` 文件搜索）已实现，却**没有**借此上线程化：它用访问数上限
+（`kMaxVisit`）把同步遍历的耗时压到可接受范围，见
+[FilePlugin 同步遍历的访问上限兜底](fileplugin-bounded-scan.md)。本节描述的
+`QtConcurrent` + 失效代次方案仍是未来的正解，待目录规模成为实际痛点时再做。
+
 ## 正确做法（给后续实现者）
 
 - 新增慢插件时，不要在 `query` 里直接做耗时 IO 并期望同步返回；先在 `runQuery()`

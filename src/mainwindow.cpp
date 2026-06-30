@@ -69,7 +69,7 @@ void MainWindow::setupUi() {
     cardLayout->setSpacing(0);
 
     m_search = new QLineEdit(card);
-    m_search->setPlaceholderText("搜索应用、文件、命令…");
+    m_search->setPlaceholderText("搜索…");
     m_search->setFixedHeight(kSearchH);
     m_search->setStyleSheet(R"(
         QLineEdit {
@@ -167,15 +167,24 @@ void MainWindow::runQuery() {
 
     m_delegate->setKeyword(kw);
 
+    // 输入命中某个前缀插件时，抑制全局插件，避免应用结果污染命令/文件视图
+    bool prefixActive = false;
+    for (auto *p : m_plugins) {
+        const QString pre = p->triggerPrefix();
+        if (!pre.isEmpty() && kw.startsWith(pre)) { prefixActive = true; break; }
+    }
+
     QList<ResultItem> results;
     for (auto *p : m_plugins) {
         const QString prefix = p->triggerPrefix();
         QString sub;
         if (prefix.isEmpty()) {
+            if (prefixActive) continue;  // 已有前缀插件接管，全局插件让位
             sub = kw;  // 全局插件：对任意输入生效
         } else if (kw.startsWith(prefix)) {
+            // 裸前缀（只键入前缀本身）也照常调用插件，由插件决定空查询如何处理：
+            // 命令类插件可列出全部命令（命令面板），文件类插件可返回空避免全盘列举。
             sub = kw.mid(prefix.length()).trimmed();
-            if (sub.isEmpty()) continue;  // 只键入了前缀本身，尚无查询词
         } else {
             continue;  // 前缀不匹配，跳过该插件
         }
