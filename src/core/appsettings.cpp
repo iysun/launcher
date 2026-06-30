@@ -29,6 +29,10 @@ void AppSettings::setDisabledPlugins(const QStringList &names) {
     m_disabledPlugins = names;
 }
 
+void AppSettings::setWebEngineOrder(const QStringList &order) {
+    m_webEngineOrder = order;
+}
+
 void AppSettings::save() const {
     QJsonObject obj;
     obj["hotkey"]    = m_hotkey;
@@ -38,6 +42,11 @@ void AppSettings::save() const {
     for (const QString &n : m_disabledPlugins)
         arr.append(n);
     obj["disabledPlugins"] = arr;
+
+    QJsonArray orderArr;
+    for (const QString &id : m_webEngineOrder)
+        orderArr.append(id);
+    obj["webEngineOrder"] = orderArr;
 
     const QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
                          + "/settings.json";
@@ -59,6 +68,11 @@ void AppSettings::load() {
         m_disabledPlugins.clear();
         for (const QJsonValue &v : obj["disabledPlugins"].toArray())
             m_disabledPlugins.append(v.toString());
+    }
+    if (obj.contains("webEngineOrder")) {
+        m_webEngineOrder.clear();
+        for (const QJsonValue &v : obj["webEngineOrder"].toArray())
+            m_webEngineOrder.append(v.toString());
     }
 }
 

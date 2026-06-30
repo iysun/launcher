@@ -12,10 +12,12 @@ public:
     QString     hotkey()          const { return m_hotkey; }
     bool        autostart()       const { return m_autostart; }
     QStringList disabledPlugins() const { return m_disabledPlugins; }
+    QStringList webEngineOrder()  const { return m_webEngineOrder; }
 
     void setHotkey(const QString &seq);
     void setAutostart(bool on);
     void setDisabledPlugins(const QStringList &names);
+    void setWebEngineOrder(const QStringList &order);
 
     void save() const;
 
@@ -29,4 +31,5 @@ private:
     QString     m_hotkey          = "Alt+Space";
     bool        m_autostart       = false;
     QStringList m_disabledPlugins;
+    QStringList m_webEngineOrder  = {"google", "bing", "baidu", "github"};
 };

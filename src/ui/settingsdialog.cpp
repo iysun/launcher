@@ -1,5 +1,6 @@
 #include "settingsdialog.h"
 #include "core/appsettings.h"
+#include "plugins/webplugin.h"
 #include "ui/hotkeyedit.h"
 #include <QApplication>
 #include <QCheckBox>
@@ -8,6 +9,7 @@
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QListWidget>
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QPushButton>
@@ -183,6 +185,95 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         }
     }
 
+    // 网页搜索引擎优先级
+    {
+        auto *sep = new QFrame(content);
+        sep->setFrameShape(QFrame::HLine);
+        sep->setStyleSheet(QString("background: %1; border: none; max-height: 1px; margin: 4px 0;").arg(kBorder));
+        contentLayout->addWidget(sep);
+
+        contentLayout->addWidget(makeSectionLabel("网页搜索引擎优先级"));
+
+        auto *row = new QWidget(content);
+        auto *rowLayout = new QHBoxLayout(row);
+        rowLayout->setContentsMargins(0, 0, 0, 0);
+        rowLayout->setSpacing(8);
+
+        m_engineList = new QListWidget(row);
+        m_engineList->setFixedHeight(112);
+        m_engineList->setStyleSheet(QString(R"(
+            QListWidget {
+                background: %1; color: %2;
+                border: 1px solid %3; border-radius: 6px;
+                font-size: 13px; outline: 0;
+            }
+            QListWidget::item { padding: 4px 8px; }
+            QListWidget::item:selected { background: %4; color: #1e1e2e; }
+            QListWidget::item:hover:!selected { background: #45475a; }
+        )").arg(kSurface0, kText, kBorder, kBlue));
+
+        // 按已保存顺序填充引擎名称，UserRole 存 id
+        const QStringList savedOrder = m_settings->webEngineOrder();
+        const QList<WebEngine> allEngines = WebPlugin::allEngines();
+        // 先按 savedOrder 排，再追加 savedOrder 里没有的（兼容日后新增引擎）
+        QList<WebEngine> ordered;
+        for (const QString &id : savedOrder)
+            for (const WebEngine &e : allEngines)
+                if (e.id == id) { ordered.append(e); break; }
+        for (const WebEngine &e : allEngines) {
+            bool found = false;
+            for (const WebEngine &o : ordered) if (o.id == e.id) { found = true; break; }
+            if (!found) ordered.append(e);
+        }
+        for (const WebEngine &e : ordered) {
+            auto *it = new QListWidgetItem(e.name, m_engineList);
+            it->setData(Qt::UserRole, e.id);
+        }
+        if (m_engineList->count()) m_engineList->setCurrentRow(0);
+        rowLayout->addWidget(m_engineList, 1);
+
+        const QString arrowBtn = QString(R"(
+            QPushButton {
+                background: %1; color: %2; font-size: 16px;
+                border: 1px solid %3; border-radius: 6px;
+                min-width: 32px; min-height: 32px;
+            }
+            QPushButton:hover { background: #45475a; }
+            QPushButton:disabled { color: %3; }
+        )").arg(kSurface0, kText, kBorder);
+
+        auto *btnCol = new QWidget(row);
+        auto *btnLayout = new QVBoxLayout(btnCol);
+        btnLayout->setContentsMargins(0, 0, 0, 0);
+        btnLayout->setSpacing(6);
+
+        auto *upBtn   = new QPushButton("↑", btnCol);
+        auto *downBtn = new QPushButton("↓", btnCol);
+        upBtn->setStyleSheet(arrowBtn);
+        downBtn->setStyleSheet(arrowBtn);
+        btnLayout->addWidget(upBtn);
+        btnLayout->addWidget(downBtn);
+        btnLayout->addStretch();
+        rowLayout->addWidget(btnCol);
+
+        connect(upBtn, &QPushButton::clicked, this, [this] {
+            const int row = m_engineList->currentRow();
+            if (row <= 0) return;
+            auto *item = m_engineList->takeItem(row);
+            m_engineList->insertItem(row - 1, item);
+            m_engineList->setCurrentRow(row - 1);
+        });
+        connect(downBtn, &QPushButton::clicked, this, [this] {
+            const int row = m_engineList->currentRow();
+            if (row < 0 || row >= m_engineList->count() - 1) return;
+            auto *item = m_engineList->takeItem(row);
+            m_engineList->insertItem(row + 1, item);
+            m_engineList->setCurrentRow(row + 1);
+        });
+
+        contentLayout->addWidget(row);
+    }
+
     outer->addWidget(content);
 
     // ── 底部按钮 ─────────────────────────────────────────────
@@ -241,6 +332,13 @@ void SettingsDialog::save() {
             disabled.append(m_pluginNames[i]);
     }
     m_settings->setDisabledPlugins(disabled);
+
+    if (m_engineList) {
+        QStringList order;
+        for (int i = 0; i < m_engineList->count(); ++i)
+            order.append(m_engineList->item(i)->data(Qt::UserRole).toString());
+        m_settings->setWebEngineOrder(order);
+    }
 
     m_settings->save();
     hide();

@@ -6,6 +6,7 @@ class AppSettings;
 class HotkeyEdit;
 class QCheckBox;
 class QLabel;
+class QListWidget;
 class QPoint;
 
 class SettingsDialog : public QWidget {
@@ -29,6 +30,7 @@ private:
     QCheckBox          *m_autostartCheck;
     QList<QCheckBox *>  m_pluginChecks;
     QList<QString>      m_pluginNames;
+    QListWidget        *m_engineList = nullptr;
 
     QPoint m_dragPos;
     static constexpr int kTitleH = 44;
