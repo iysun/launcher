@@ -1,7 +1,9 @@
 #include "mainwindow.h"
 #include "ui/resultdelegate.h"
 #include <QApplication>
+#include <QCursor>
 #include <QFrame>
+#include <QGuiApplication>
 #include <QHotkey>
 #include <QLayout>
 #include <QKeyEvent>
@@ -111,9 +113,13 @@ void MainWindow::toggle() {
 }
 
 void MainWindow::centerOnScreen() {
-    QScreen *scr = QApplication::primaryScreen();
-    QRect geo    = scr->availableGeometry();
-    move(geo.center().x() - kWidth / 2, geo.height() / 4);
+    // 跟随光标所在屏（多屏场景），取不到再回退主屏
+    QScreen *scr = QGuiApplication::screenAt(QCursor::pos());
+    if (!scr)
+        scr = QApplication::primaryScreen();
+    const QRect geo = scr->availableGeometry();
+    // 用 left()/top() 偏移，确保在副屏或带任务栏时定位正确
+    move(geo.left() + (geo.width() - kWidth) / 2, geo.top() + geo.height() / 4);
 }
 
 void MainWindow::changeEvent(QEvent *e) {
