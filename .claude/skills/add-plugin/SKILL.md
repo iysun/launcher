@@ -23,6 +23,7 @@ description: 为 launcher 新增一个搜索插件。当用户要添加新插件
 - **前缀触发**：重写 `triggerPrefix()` 返回前缀（如 `"="`）。MainWindow 仅在输入以此前缀开头时调用本插件，并**已剥离前缀**传入 `query` —— 插件无需自己判断/剥离前缀。全局插件不重写（默认空串）。
 - **打分与排序**：用 `Matcher::score`（`src/core/matcher.h`）算分填入 `ResultItem::score`；排序、截断（≤8 条）由 MainWindow 跨插件统一处理，插件**不要**自己排序或限制条数。
 - **execute 归属**：`execute()` 只会对产出该结果的插件触发（`owner` 由 MainWindow 标记），插件间互不串扰；`execute()` **不能阻塞 UI 线程**（耗时操作异步处理）。
+- **次级动作（可选）**：重写 `executeAlt()` 处理 `Ctrl+Enter`（如复制路径/打开所在目录），默认无操作。
 - 跨平台差异用 `#ifdef Q_OS_WIN` / `#else` 隔离。
 
 头文件骨架：

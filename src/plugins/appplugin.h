@@ -16,6 +16,7 @@ public:
     QString           name()  const override { return "AppLauncher"; }
     QList<ResultItem> query(const QString &keyword) override;
     void              execute(const ResultItem &item) override;
+    void              executeAlt(const ResultItem &item) override;  // Ctrl+Enter：复制路径
 
 private:
     void loadApps();                            // 全量重扫 m_apps 并刷新监听目录

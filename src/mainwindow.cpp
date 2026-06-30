@@ -231,11 +231,19 @@ void MainWindow::showResults(const QList<ResultItem> &items) {
 }
 
 void MainWindow::onItemActivated(QListWidgetItem *item) {
+    activate(item, false);  // 鼠标双击 / itemActivated 信号：主动作
+}
+
+void MainWindow::activate(QListWidgetItem *item, bool alt) {
     if (!item) return;
     auto result = item->data(Qt::UserRole).value<ResultItem>();
     if (result.owner) {  // 只让产出该结果的插件执行，互不串扰
-        result.owner->execute(result);
-        m_usage->recordUse(result.action);  // 记录使用，供 frecency 排序
+        if (alt) {
+            result.owner->executeAlt(result);  // Ctrl+Enter：次级动作（不计入 frecency）
+        } else {
+            result.owner->execute(result);
+            m_usage->recordUse(result.action);  // 记录使用，供 frecency 排序
+        }
     }
     hide();
 }
@@ -256,7 +264,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e) {
         case Qt::Key_Return:
         case Qt::Key_Enter:
             flushPendingQuery();  // 确保作用于最新关键词的结果
-            onItemActivated(m_list->count() ? m_list->item(0) : nullptr);
+            activate(m_list->count() ? m_list->item(0) : nullptr,
+                     key->modifiers() & Qt::ControlModifier);
             return true;
         case Qt::Key_Down:
             if (m_list->count()) {
@@ -276,7 +285,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e) {
         case Qt::Key_Return:
         case Qt::Key_Enter:
             flushPendingQuery();  // 确保作用于最新关键词的结果
-            onItemActivated(m_list->currentItem());
+            activate(m_list->currentItem(), key->modifiers() & Qt::ControlModifier);
             return true;
         case Qt::Key_Up:
             if (m_list->currentRow() == 0) {

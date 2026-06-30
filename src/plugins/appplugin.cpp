@@ -1,8 +1,10 @@
 #include "appplugin.h"
 #include "core/matcher.h"
+#include <QClipboard>
 #include <QDir>
 #include <QFileInfo>
 #include <QFileSystemWatcher>
+#include <QGuiApplication>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QTimer>
@@ -64,6 +66,12 @@ void AppPlugin::execute(const ResultItem &item) {
     cmd.remove(QRegularExpression("%[uUfFdDnNickvm]"));
     QProcess::startDetached("/bin/sh", {"-c", cmd.trimmed()});
 #endif
+}
+
+// Ctrl+Enter：把路径/命令复制到剪贴板（跨平台一致）
+void AppPlugin::executeAlt(const ResultItem &item) {
+    if (!item.action.isEmpty())
+        QGuiApplication::clipboard()->setText(item.action);
 }
 
 // ── 私有：预加载 ──────────────────────────────────────────────

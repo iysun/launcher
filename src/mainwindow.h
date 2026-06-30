@@ -31,6 +31,7 @@ private:
     void showResults(const QList<ResultItem> &items);
     void centerOnScreen();
     void flushPendingQuery();  // 回车前冲刷防抖，确保作用于最新关键词的结果
+    void activate(QListWidgetItem *item, bool alt);  // alt=Ctrl+Enter 触发次级动作
 
     QLineEdit      *m_search;
     QListWidget    *m_list;

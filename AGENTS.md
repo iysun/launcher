@@ -141,7 +141,7 @@ docs/
 └── features.md             # 功能规划
 ```
 
-**数据流：** 搜索框输入 → 防抖（停顿 ~100ms）→ 按 `triggerPrefix` 路由到匹配的插件（前缀已剥离）→ `IPlugin::query` → 跨插件统一打分排序、截断 → 结果列表 → 用户回车 → 仅**产出该结果的插件** `IPlugin::execute` → 隐藏窗口
+**数据流：** 搜索框输入 → 防抖（停顿 ~100ms）→ 按 `triggerPrefix` 路由到匹配的插件（前缀已剥离）→ `IPlugin::query` → 跨插件统一打分排序（含 frecency）、截断 → 结果列表 → 用户回车 → 仅**产出该结果的插件** `IPlugin::execute`（`Ctrl+Enter` 则 `executeAlt`）→ 隐藏窗口
 
 ---
 
