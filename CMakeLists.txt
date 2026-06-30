@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
+# 导出 compile_commands.json，供 clangd / eglot / vscode 提供跳转、补全、诊断
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 add_subdirectory(third_party/QHotkey)
