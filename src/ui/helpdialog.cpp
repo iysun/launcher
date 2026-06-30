@@ -132,6 +132,7 @@ void HelpDialog::buildLayout() {
     cl->addWidget(row("（无前缀）", "搜索已安装应用", content));
     cl->addWidget(row("/",          "命令（裸 / 列出全部）", content));
     cl->addWidget(row("@",          "文件搜索", content));
+    cl->addWidget(row("?",          "网页搜索（Google / Bing / Baidu / GitHub）", content));
 
     cl->addWidget(separator(content));
 
