@@ -58,8 +58,7 @@ win.addPlugin(new MyPlugin);
 
 ## Roadmap
 
-- [ ] Calculator plugin (`= 1+2*3`)
-- [ ] File search plugin
-- [ ] Web search plugin
-- [ ] System tray icon
-- [ ] Settings UI
+- [x] File search plugin
+- [x] Web search plugin
+- [x] System tray icon
+- [x] Settings UI
