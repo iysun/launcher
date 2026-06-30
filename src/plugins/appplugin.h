@@ -1,4 +1,5 @@
 #pragma once
+#include "core/pinyin.h"
 #include "plugin/iplugin.h"
 #include <QObject>
 
@@ -24,7 +25,8 @@ private:
     void loadApps();                            // 全量重扫 m_apps 并刷新监听目录
     void updateWatch(const QStringList &dirs);  // 用最新目录集替换 watcher 监听
 
-    QFileSystemWatcher *m_watcher;
-    QTimer             *m_reloadTimer;  // 合并目录变更的突发事件，去抖后重扫
-    QList<ResultItem>   m_apps;         // 预加载，查询时只过滤
+    QFileSystemWatcher    *m_watcher;
+    QTimer                *m_reloadTimer;  // 合并目录变更的突发事件，去抖后重扫
+    QList<ResultItem>      m_apps;         // 预加载，查询时只过滤
+    QList<Pinyin::Result>  m_pinyins;      // 与 m_apps 并行，下标一一对应
 };

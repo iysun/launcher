@@ -44,8 +44,15 @@ void ResultDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt,
     const QColor hi   = selected ? QColor("#f5e0dc") : QColor("#89b4fa");
     const QString disp =
         p->fontMetrics().elidedText(item.title, Qt::ElideRight, titleR.width());
-    // 命中位置在实际绘制的 disp 上计算，兼容子串与子序列（非连续）两种命中
-    const QList<int> hits = Matcher::matchedPositions(disp, m_kw);
+    // 拼音命中时使用预计算的 title 字符下标（过滤超出省略范围的位置）；
+    // 否则在实际绘制的 disp 上动态计算，兼容子串与子序列两种命中。
+    QList<int> hits;
+    if (!item.matchHighlight.isEmpty()) {
+        for (int idx : item.matchHighlight)
+            if (idx < disp.length()) hits.append(idx);
+    } else {
+        hits = Matcher::matchedPositions(disp, m_kw);
+    }
 
     if (hits.isEmpty()) {
         p->setPen(base);

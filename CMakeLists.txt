@@ -17,6 +17,8 @@ qt_add_executable(launcher
     src/main.cpp
     src/mainwindow.cpp
     src/core/matcher.cpp
+    src/core/pinyin.cpp
+    src/core/pinyin_data.cpp
     src/core/usagestore.cpp
     src/plugins/appplugin.cpp
     src/plugins/commandplugin.cpp
@@ -39,6 +41,8 @@ enable_testing()
 qt_add_executable(matcher_test
     tests/test_matcher.cpp
     src/core/matcher.cpp
+    src/core/pinyin.cpp
+    src/core/pinyin_data.cpp
 )
 target_include_directories(matcher_test PRIVATE src)
 target_link_libraries(matcher_test PRIVATE Qt6::Test)

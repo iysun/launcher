@@ -44,12 +44,38 @@ QList<ResultItem> AppPlugin::query(const QString &keyword) {
     if (kw.isEmpty()) return {};
 
     // 只负责筛选与打分；排序与截断由 MainWindow 跨插件统一处理
+    // 拼音匹配扣罚：全拼 -50，首字母缩写 -120；保证直接字面命中始终优先。
+    static constexpr int kFullPenalty = 50;
+    static constexpr int kInitPenalty = 120;
+
     QList<ResultItem> results;
-    for (const auto &app : m_apps) {
-        const int s = Matcher::score(app.title, kw);
-        if (s < 0) continue;
-        ResultItem item = app;
-        item.score      = s;
+    for (int i = 0; i < m_apps.size(); ++i) {
+        const ResultItem     &app = m_apps[i];
+        const Pinyin::Result &py  = m_pinyins[i];
+
+        // ① 直接字面匹配（优先，无扣罚）
+        int  bestScore    = Matcher::score(app.title, kw);
+        bool usePinyin    = false;
+        bool useInitials  = false;
+
+        // ② 全拼匹配（仅在能提升分数时采用）
+        if (!py.full.isEmpty()) {
+            const int s = Matcher::score(py.full, kw) - kFullPenalty;
+            if (s > bestScore) { bestScore = s; usePinyin = true; useInitials = false; }
+        }
+
+        // ③ 首字母缩写匹配（同上）
+        if (!py.initials.isEmpty()) {
+            const int s = Matcher::score(py.initials, kw) - kInitPenalty;
+            if (s > bestScore) { bestScore = s; usePinyin = true; useInitials = true; }
+        }
+
+        if (bestScore < 0) continue;
+
+        ResultItem item  = app;
+        item.score       = bestScore;
+        if (usePinyin)
+            item.matchHighlight = Pinyin::pinyinMatchedTitlePositions(py, kw, useInitials);
         results.append(item);
     }
     return results;
@@ -125,6 +151,7 @@ static void scanDir(const QString &path, QList<ResultItem> &out, QStringList &wa
 
 void AppPlugin::loadApps() {
     m_apps.clear();
+    m_pinyins.clear();
     const bool comOk = SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED));
     const QStringList roots = {
         QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation),
@@ -133,6 +160,8 @@ void AppPlugin::loadApps() {
     QStringList watch;
     for (const QString &root : roots)
         scanDir(root, m_apps, watch);
+    for (const ResultItem &app : m_apps)
+        m_pinyins.append(Pinyin::compute(app.title));
     if (comOk)
         CoUninitialize();
     updateWatch(watch);
@@ -167,6 +196,7 @@ static ResultItem parseDesktop(const QString &path) {
 
 void AppPlugin::loadApps() {
     m_apps.clear();
+    m_pinyins.clear();
     const QStringList dirs = {
         "/usr/share/applications",
         QDir::homePath() + "/.local/share/applications"
@@ -183,6 +213,8 @@ void AppPlugin::loadApps() {
             }
         }
     }
+    for (const ResultItem &app : m_apps)
+        m_pinyins.append(Pinyin::compute(app.title));
     updateWatch(watch);
 }
 #endif

@@ -1,5 +1,6 @@
 #pragma once
 #include <QIcon>
+#include <QList>
 #include <QMetaType>
 #include <QString>
 
@@ -12,6 +13,7 @@ struct ResultItem {
     QIcon    icon;
     IPlugin *owner = nullptr;  // 产出该结果的插件，由 MainWindow 收集时标记
     int      score = 0;        // 匹配分，插件填写，MainWindow 据此跨插件统一排序
+    QList<int> matchHighlight; // 拼音匹配时预计算的 title 字符下标；空则 delegate 动态计算
 };
 
 Q_DECLARE_METATYPE(ResultItem)
