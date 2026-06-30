@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "core/usagestore.h"
 #include "ui/resultdelegate.h"
 #include <algorithm>
 #include <QApplication>
@@ -22,6 +23,8 @@ static constexpr int kQueryDebounceMs = 100;  // 停止输入后再查询，避�
 
 MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
     setupUi();
+
+    m_usage = new UsageStore();
 
     m_queryTimer = new QTimer(this);
     m_queryTimer->setSingleShot(true);
@@ -177,8 +180,10 @@ void MainWindow::runQuery() {
             continue;  // 前缀不匹配，跳过该插件
         }
         QList<ResultItem> r = p->query(sub);
-        for (ResultItem &item : r)
-            item.owner = p;  // 标记产出插件，execute 时只路由给它
+        for (ResultItem &item : r) {
+            item.owner  = p;  // 标记产出插件，execute 时只路由给它
+            item.score += m_usage->frecencyBonus(item.action);  // 常用项同档内上浮
+        }
         results += r;
     }
 
@@ -228,8 +233,10 @@ void MainWindow::showResults(const QList<ResultItem> &items) {
 void MainWindow::onItemActivated(QListWidgetItem *item) {
     if (!item) return;
     auto result = item->data(Qt::UserRole).value<ResultItem>();
-    if (result.owner)  // 只让产出该结果的插件执行，互不串扰
+    if (result.owner) {  // 只让产出该结果的插件执行，互不串扰
         result.owner->execute(result);
+        m_usage->recordUse(result.action);  // 记录使用，供 frecency 排序
+    }
     hide();
 }
 

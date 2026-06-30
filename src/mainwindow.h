@@ -8,6 +8,7 @@ class QListWidget;
 class QListWidgetItem;
 class QTimer;
 class ResultDelegate;
+class UsageStore;
 
 class MainWindow : public QWidget {
     Q_OBJECT
@@ -36,6 +37,7 @@ private:
     QHotkey        *m_hotkey;
     QTimer         *m_queryTimer;
     ResultDelegate *m_delegate;
+    UsageStore     *m_usage;
     QString          m_pendingKeyword;  // 防抖期间暂存的查询词
     QList<IPlugin *> m_plugins;
 };
