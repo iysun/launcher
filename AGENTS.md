@@ -56,13 +56,29 @@ python -m aqt install-qt linux desktop 6.8.3 linux_gcc_64 --outputdir <Qt安装�
 
 ### Windows
 
+推荐用 **CMakePresets**（`CMakePresets.json` 已入库，需 CMake ≥ 3.21；仅装 3.20 的用下方 `<details>` 手写命令），把机器相关路径留在环境变量里、preset 只引用，免去手敲一长串 `-D`：
+
 ```powershell
-# 设置路径变量（根据你的实际安装目录修改）
-$QT_DIR = "<Qt安装目录>\6.8.3\mingw_64"
-$MINGW  = "<Qt安装目录>\Tools\mingw1310_64\bin"
+# 设置路径环境变量（根据你的实际安装目录修改；AI harness 由 .claude/settings.local.json 注入）
+$env:QT_DIR = "<Qt安装目录>\6.8.3\mingw_64"
+$env:MINGW  = "<Qt安装目录>\Tools\mingw1310_64\bin"
 
 # 初始化子模块（首次克隆后执行一次）
 git submodule update --init
+
+# 配置 + 编译（preset 读取上面的 QT_DIR / MINGW）
+cmake --preset windows
+cmake --build --preset windows
+
+# 部署 Qt DLL（首次或更新 Qt 版本后执行）
+& "$env:QT_DIR\bin\windeployqt.exe" build\launcher.exe
+```
+
+<details><summary>不用 preset 的等价手写命令（备查）</summary>
+
+```powershell
+$QT_DIR = "<Qt安装目录>\6.8.3\mingw_64"
+$MINGW  = "<Qt安装目录>\Tools\mingw1310_64\bin"
 
 # 配置（每个 -D 参数整体加引号，否则 PowerShell 会把 3.5 吞成 3，报 Invalid value "3"）
 cmake -S . -B build -G "MinGW Makefiles" `
@@ -72,12 +88,9 @@ cmake -S . -B build -G "MinGW Makefiles" `
     "-DCMAKE_BUILD_TYPE=Release" `
     "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
 
-# 编译
 & "$MINGW\mingw32-make.exe" -C build -j8
-
-# 部署 Qt DLL（首次或更新 Qt 版本后执行）
-& "$QT_DIR\bin\windeployqt.exe" build\launcher.exe
 ```
+</details>
 
 ### Linux
 
@@ -85,15 +98,12 @@ cmake -S . -B build -G "MinGW Makefiles" `
 # 初始化子模块
 git submodule update --init
 
-# 配置
-cmake -S . -B build \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-    # 若 Qt 装在非标准路径，追加：
-    # -DCMAKE_PREFIX_PATH="<Qt安装目录>/6.8.3/gcc_64"
+# 配置 + 编译（preset）
+cmake --preset linux
+cmake --build --preset linux
 
-# 编译
-cmake --build build -j$(nproc)
+# 若 Qt 装在非标准路径，配置前设置环境变量：
+#   export CMAKE_PREFIX_PATH="<Qt安装目录>/6.8.3/gcc_64"
 ```
 
 ---
