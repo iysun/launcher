@@ -3,6 +3,8 @@
 #include <functional>
 #include <QIcon>
 
+class HelpDialog;
+
 // launcher 自身命令，"/" 前缀触发（退出 / 重载应用 / 打开数据目录 / 重启…）。
 // 设计为通用命令注册表：动作用 std::function 表达，由 main.cpp 按需装配，
 // 插件本身不与具体能力耦合。
@@ -23,7 +25,7 @@ public:
                     Action run, const QIcon &icon = {});
 
 private:
-    void showHelp() const;  // 弹出帮助：用法 + 当前全部命令
+    void showHelp();  // 弹出帮助：用法 + 当前全部命令
 
     struct Command {
         QString id, desc;
@@ -31,4 +33,5 @@ private:
         Action  run;
     };
     QList<Command> m_cmds;
+    HelpDialog    *m_helpDialog = nullptr;  // 懒初始化，持有所有权
 };

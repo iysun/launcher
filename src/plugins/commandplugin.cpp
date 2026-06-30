@@ -1,6 +1,6 @@
 #include "commandplugin.h"
 #include "core/matcher.h"
-#include <QMessageBox>
+#include "ui/helpdialog.h"
 
 CommandPlugin::CommandPlugin() {
     // help 内置自注册：showHelp 在执行时读 m_cmds，故能列出 main.cpp 后续装配的全部命令
@@ -46,17 +46,16 @@ void CommandPlugin::execute(const ResultItem &item) {
     }
 }
 
-void CommandPlugin::showHelp() const {
-    QString text =
-        "唤起 Alt+Space　·　执行 Enter　·　次级动作 Ctrl+Enter　·　关闭 Esc\n\n"
-        "前缀：\n"
-        "  （无）  搜索应用\n"
-        "  /       命令（裸 / 列出全部）\n"
-        "  @       文件搜索\n\n"
-        "命令：\n";
-    for (const auto &c : m_cmds)
-        text += "  /" + c.id + "  —  " + c.desc + "\n";
+void CommandPlugin::showHelp() {
+    if (!m_helpDialog)
+        m_helpDialog = new HelpDialog();
 
-    QMessageBox box(QMessageBox::Information, "Launcher 帮助", text.trimmed());
-    box.exec();  // 模态阻塞；返回后 MainWindow 照常隐藏
+    QList<QPair<QString, QString>> cmds;
+    for (const auto &c : m_cmds)
+        cmds.append({c.id, c.desc});
+    m_helpDialog->setCommands(cmds);
+
+    m_helpDialog->show();
+    m_helpDialog->raise();
+    m_helpDialog->activateWindow();
 }

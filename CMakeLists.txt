@@ -27,6 +27,7 @@ qt_add_executable(launcher
     src/ui/resultdelegate.cpp
     src/ui/settingsdialog.cpp
     src/ui/hotkeyedit.cpp
+    src/ui/helpdialog.cpp
 )
 
 target_include_directories(launcher PRIVATE src)

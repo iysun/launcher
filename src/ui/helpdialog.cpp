@@ -1,0 +1,208 @@
+#include "helpdialog.h"
+#include <QFrame>
+#include <QGuiApplication>
+#include <QHBoxLayout>
+#include <QKeyEvent>
+#include <QLabel>
+#include <QMouseEvent>
+#include <QPushButton>
+#include <QScreen>
+#include <QVBoxLayout>
+
+// ── 颜色常量（Catppuccin Mocha，与 SettingsDialog 一致） ─────────
+static const char *kBg       = "#1e1e2e";
+static const char *kSurface0 = "#313244";
+static const char *kOverlay0 = "#6c7086";
+static const char *kText     = "#cdd6f4";
+static const char *kBlue     = "#89b4fa";
+static const char *kBorder   = "#45475a";
+
+// ── 辅助：小节标题 ────────────────────────────────────────────────
+static QLabel *sectionLabel(const QString &text) {
+    auto *lbl = new QLabel(text);
+    lbl->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: bold;").arg(kOverlay0));
+    return lbl;
+}
+
+// 辅助：单行 key + desc（固定宽度左列，右列自然延伸）
+static QWidget *row(const QString &key, const QString &desc, QWidget *parent) {
+    auto *w  = new QWidget(parent);
+    auto *hl = new QHBoxLayout(w);
+    hl->setContentsMargins(0, 0, 0, 0);
+    hl->setSpacing(12);
+
+    auto *keyLbl = new QLabel(key, w);
+    keyLbl->setFixedWidth(130);
+    keyLbl->setStyleSheet(QString("color: %1; font-size: 13px;").arg(kBlue));
+
+    auto *descLbl = new QLabel(desc, w);
+    descLbl->setStyleSheet(QString("color: %1; font-size: 13px;").arg(kText));
+    descLbl->setWordWrap(true);
+
+    hl->addWidget(keyLbl);
+    hl->addWidget(descLbl, 1);
+    return w;
+}
+
+static QFrame *separator(QWidget *parent) {
+    auto *sep = new QFrame(parent);
+    sep->setFrameShape(QFrame::HLine);
+    sep->setStyleSheet(QString("background: %1; border: none; max-height: 1px;").arg(kBorder));
+    return sep;
+}
+
+// ── 构建界面 ──────────────────────────────────────────────────────
+
+HelpDialog::HelpDialog(QWidget *parent)
+    : QWidget(parent) {
+    setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    setAttribute(Qt::WA_TranslucentBackground);
+    setFixedWidth(kWidth);
+    buildLayout();
+
+    QScreen *scr = QGuiApplication::primaryScreen();
+    if (scr) {
+        const QRect geo = scr->availableGeometry();
+        move(geo.left() + (geo.width() - kWidth) / 2, geo.top() + geo.height() / 3);
+    }
+}
+
+void HelpDialog::buildLayout() {
+    auto *root = new QVBoxLayout(this);
+    root->setContentsMargins(0, 0, 0, 0);
+    root->setSpacing(0);
+
+    auto *card = new QFrame(this);
+    card->setObjectName("helpCard");
+    card->setFixedWidth(kWidth);
+    card->setStyleSheet(QString(R"(
+        QFrame#helpCard {
+            background: %1;
+            border: 1px solid %2;
+            border-radius: 10px;
+        }
+    )").arg(kBg, kBorder));
+    root->addWidget(card);
+
+    auto *outer = new QVBoxLayout(card);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
+
+    // ── 标题栏 ───────────────────────────────────────────────
+    auto *titleBar = new QWidget(card);
+    titleBar->setFixedHeight(kTitleH);
+    titleBar->setStyleSheet("background: transparent;");
+    auto *tl = new QHBoxLayout(titleBar);
+    tl->setContentsMargins(16, 0, 12, 0);
+
+    auto *titleLbl = new QLabel("帮助", titleBar);
+    titleLbl->setStyleSheet(QString("color: %1; font-size: 15px; font-weight: bold;").arg(kText));
+    tl->addWidget(titleLbl);
+    tl->addStretch();
+
+    auto *closeBtn = new QPushButton("×", titleBar);
+    closeBtn->setFixedSize(28, 28);
+    closeBtn->setStyleSheet(QString(R"(
+        QPushButton { background: transparent; color: %1; font-size: 18px; border: none; border-radius: 4px; }
+        QPushButton:hover { background: %2; }
+    )").arg(kOverlay0, kSurface0));
+    tl->addWidget(closeBtn);
+    connect(closeBtn, &QPushButton::clicked, this, &HelpDialog::hide);
+    outer->addWidget(titleBar);
+    outer->addWidget(separator(card));
+
+    // ── 内容区 ───────────────────────────────────────────────
+    auto *content = new QWidget(card);
+    auto *cl = new QVBoxLayout(content);
+    cl->setContentsMargins(20, 14, 20, 14);
+    cl->setSpacing(6);
+
+    // 快捷键
+    cl->addWidget(sectionLabel("快捷键"));
+    cl->addWidget(row("Alt+Space",   "唤起 / 隐藏", content));
+    cl->addWidget(row("Enter",       "执行选中项", content));
+    cl->addWidget(row("Ctrl+Enter",  "次级动作（复制路径等）", content));
+    cl->addWidget(row("Esc / Ctrl+G","关闭", content));
+    cl->addWidget(row("↑ ↓ / Ctrl+P/N", "移动选中项", content));
+
+    cl->addWidget(separator(content));
+
+    // 前缀
+    cl->addWidget(sectionLabel("搜索前缀"));
+    cl->addWidget(row("（无前缀）", "搜索已安装应用", content));
+    cl->addWidget(row("/",          "命令（裸 / 列出全部）", content));
+    cl->addWidget(row("@",          "文件搜索", content));
+
+    cl->addWidget(separator(content));
+
+    // 命令列表（动态，由 setCommands 填入）
+    cl->addWidget(sectionLabel("命令"));
+    auto *cmdContainer = new QWidget(content);
+    m_cmdLayout = new QVBoxLayout(cmdContainer);
+    m_cmdLayout->setContentsMargins(0, 0, 0, 0);
+    m_cmdLayout->setSpacing(4);
+    cl->addWidget(cmdContainer);
+
+    outer->addWidget(content);
+    outer->addWidget(separator(card));
+
+    // ── 底部按钮 ─────────────────────────────────────────────
+    auto *footer = new QWidget(card);
+    auto *fl = new QHBoxLayout(footer);
+    fl->setContentsMargins(20, 10, 20, 10);
+    fl->addStretch();
+
+    auto *closeBtn2 = new QPushButton("关闭", footer);
+    closeBtn2->setFixedWidth(80);
+    closeBtn2->setStyleSheet(QString(R"(
+        QPushButton { background: %1; color: %2; font-size: 13px; border: none; border-radius: 6px; padding: 6px 0; }
+        QPushButton:hover { background: #45475a; }
+    )").arg(kSurface0, kText));
+    fl->addWidget(closeBtn2);
+    connect(closeBtn2, &QPushButton::clicked, this, &HelpDialog::hide);
+
+    outer->addWidget(footer);
+}
+
+void HelpDialog::setCommands(const QList<QPair<QString, QString>> &cmds) {
+    m_cmds = cmds;
+    rebuildCommands();
+}
+
+void HelpDialog::rebuildCommands() {
+    // 清空旧命令行
+    while (m_cmdLayout->count()) {
+        auto *item = m_cmdLayout->takeAt(0);
+        delete item->widget();
+        delete item;
+    }
+    for (const auto &c : m_cmds) {
+        auto *w = row("/" + c.first, c.second, m_cmdLayout->parentWidget());
+        m_cmdLayout->addWidget(w);
+    }
+    adjustSize();
+}
+
+// ── 键盘 / 拖拽 ───────────────────────────────────────────────────
+
+void HelpDialog::keyPressEvent(QKeyEvent *e) {
+    if (e->key() == Qt::Key_Escape) { hide(); return; }
+    QWidget::keyPressEvent(e);
+}
+
+void HelpDialog::mousePressEvent(QMouseEvent *e) {
+    if (e->button() == Qt::LeftButton && e->pos().y() < kTitleH)
+        m_dragPos = e->globalPosition().toPoint() - frameGeometry().topLeft();
+    QWidget::mousePressEvent(e);
+}
+
+void HelpDialog::mouseMoveEvent(QMouseEvent *e) {
+    if ((e->buttons() & Qt::LeftButton) && !m_dragPos.isNull())
+        move(e->globalPosition().toPoint() - m_dragPos);
+    QWidget::mouseMoveEvent(e);
+}
+
+void HelpDialog::mouseReleaseEvent(QMouseEvent *e) {
+    m_dragPos = {};
+    QWidget::mouseReleaseEvent(e);
+}
