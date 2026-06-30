@@ -20,10 +20,13 @@ qt_add_executable(launcher
     src/core/pinyin.cpp
     src/core/pinyin_data.cpp
     src/core/usagestore.cpp
+    src/core/appsettings.cpp
     src/plugins/appplugin.cpp
     src/plugins/commandplugin.cpp
     src/plugins/fileplugin.cpp
     src/ui/resultdelegate.cpp
+    src/ui/settingsdialog.cpp
+    src/ui/hotkeyedit.cpp
 )
 
 target_include_directories(launcher PRIVATE src)

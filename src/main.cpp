@@ -1,7 +1,9 @@
 #include "mainwindow.h"
+#include "core/appsettings.h"
 #include "plugins/appplugin.h"
 #include "plugins/commandplugin.h"
 #include "plugins/fileplugin.h"
+#include "ui/settingsdialog.h"
 #include <QApplication>
 #include <QDesktopServices>
 #include <QProcess>
@@ -11,12 +13,13 @@
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     app.setQuitOnLastWindowClosed(false);
-    app.setApplicationName("launcher");  // 决定 usage.json 等用户数据目录，须早于 MainWindow
+    app.setApplicationName("launcher");  // 决定 usage.json / settings.json 目录，须早于 MainWindow
 
-    MainWindow win;
+    auto *settings = new AppSettings;
+    MainWindow win(settings);
 
     auto *appPlugin = new AppPlugin;
-    win.addPlugin(appPlugin);     // 全局：应用搜索
+    win.addPlugin(appPlugin);       // 全局：应用搜索
     win.addPlugin(new FilePlugin);  // "@" 前缀：文件搜索
 
     // "/" 前缀：launcher 自身命令。动作在此装配，命令插件本身不与具体能力耦合。
@@ -33,6 +36,14 @@ int main(int argc, char *argv[]) {
         qApp->quit();
     });
     win.addPlugin(cmd);
+
+    // 所有插件注册完毕后创建设置对话框（插件列表已完整）
+    auto *settingsDialog = new SettingsDialog(settings, win.plugins());
+    cmd->addCommand("settings", "打开设置", [settingsDialog] {
+        settingsDialog->show();
+        settingsDialog->raise();
+        settingsDialog->activateWindow();
+    });
 
     win.show();
 

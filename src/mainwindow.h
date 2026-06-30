@@ -2,6 +2,7 @@
 #include "plugin/iplugin.h"
 #include <QWidget>
 
+class AppSettings;
 class QHotkey;
 class QKeyEvent;
 class QLineEdit;
@@ -14,8 +15,9 @@ class UsageStore;
 class MainWindow : public QWidget {
     Q_OBJECT
 public:
-    explicit MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(AppSettings *settings, QWidget *parent = nullptr);
     void addPlugin(IPlugin *plugin);
+    const QList<IPlugin *>& plugins() const { return m_plugins; }
 
 protected:
     void changeEvent(QEvent *e) override;
@@ -44,6 +46,7 @@ private:
     QTimer         *m_queryTimer;
     ResultDelegate *m_delegate;
     UsageStore     *m_usage;
+    AppSettings    *m_settings;
     QString          m_pendingKeyword;  // 防抖期间暂存的查询词
     QList<IPlugin *> m_plugins;
 

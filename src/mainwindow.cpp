@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "core/appsettings.h"
 #include "core/usagestore.h"
 #include "ui/resultdelegate.h"
 #include <algorithm>
@@ -23,7 +24,8 @@ static constexpr int kSearchH        = 52;
 static constexpr int kMaxItems       = 8;
 static constexpr int kQueryDebounceMs = 100;  // 停止输入后再查询，避免逐键查询
 
-MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
+MainWindow::MainWindow(AppSettings *settings, QWidget *parent)
+    : QWidget(parent), m_settings(settings) {
     setupUi();
 
     m_usage = new UsageStore();
@@ -33,8 +35,16 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
     m_queryTimer->setInterval(kQueryDebounceMs);
     connect(m_queryTimer, &QTimer::timeout, this, &MainWindow::runQuery);
 
-    m_hotkey = new QHotkey(QKeySequence("Alt+Space"), true, this);
+    const QString hotkey = m_settings ? m_settings->hotkey() : "Alt+Space";
+    m_hotkey = new QHotkey(QKeySequence(hotkey), true, this);
     connect(m_hotkey, &QHotkey::activated, this, &MainWindow::toggle);
+
+    if (m_settings) {
+        connect(m_settings, &AppSettings::hotkeyChanged, this, [this](const QString &seq) {
+            m_hotkey->setRegistered(false);
+            m_hotkey->setShortcut(QKeySequence(seq), true);
+        });
+    }
 }
 
 void MainWindow::addPlugin(IPlugin *plugin) {
@@ -178,8 +188,11 @@ void MainWindow::runQuery() {
         if (!pre.isEmpty() && kw.startsWith(pre)) { prefixActive = true; break; }
     }
 
+    const QStringList disabled = m_settings ? m_settings->disabledPlugins() : QStringList{};
+
     QList<ResultItem> sync;
     for (auto *p : m_plugins) {
+        if (disabled.contains(p->name())) continue;
         const QString prefix = p->triggerPrefix();
         QString sub;
         if (prefix.isEmpty()) {
