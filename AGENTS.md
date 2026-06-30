@@ -126,7 +126,7 @@ docs/
 └── features.md             # 功能规划
 ```
 
-**数据流：** 搜索框输入 → `IPlugin::query`（所有插件）→ 结果列表 → 用户回车 → `IPlugin::execute` → 隐藏窗口
+**数据流：** 搜索框输入 → 防抖（停顿 ~100ms）→ 按 `triggerPrefix` 路由到匹配的插件（前缀已剥离）→ `IPlugin::query` → 跨插件统一打分排序、截断 → 结果列表 → 用户回车 → 仅**产出该结果的插件** `IPlugin::execute` → 隐藏窗口
 
 ---
 
@@ -138,10 +138,16 @@ docs/
 class MyPlugin : public IPlugin {
 public:
     QString           name()  const override { return "MyPlugin"; }
-    QList<ResultItem> query(const QString &keyword) override { /* 返回最多 8 条 */ }
+    // 前缀触发：返回非空前缀（如 "="），MainWindow 仅在输入以此开头时调用本插件，
+    // 并已剥离前缀；全局插件不重写此函数（默认返回空串）。
+    QString           triggerPrefix() const override { return "="; }
+    QList<ResultItem> query(const QString &keyword) override { /* 打分排序由共享 ranker/MainWindow 统一处理，这里只筛选+填 score */ }
     void              execute(const ResultItem &item) override { /* 不能阻塞 UI 线程 */ }
 };
 ```
+
+- 打分用 `Matcher::score`（`src/core/matcher.h`）填入 `ResultItem::score`，排序/截断由 MainWindow 跨插件统一处理，插件**不必**自己排序或限制条数。
+- `execute` 只会对**产出该结果的插件**触发（`ResultItem::owner` 由 MainWindow 标记），插件间互不串扰。
 
 2. 将 `.cpp` 加入 `CMakeLists.txt` 的 `qt_add_executable` 源文件列表
 3. 在 `main.cpp` 注册：`win.addPlugin(new MyPlugin)`

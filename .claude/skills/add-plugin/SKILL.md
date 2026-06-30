@@ -20,9 +20,9 @@ description: 为 launcher 新增一个搜索插件。当用户要添加新插件
 实现 `IPlugin` 三个纯虚函数（接口见 `src/plugin/iplugin.h`，数据结构见 `src/plugin/resultitem.h`）。可参考现有 `src/plugins/appplugin.h/.cpp`。
 
 约束：
-- `query()` **最多返回 8 条** `ResultItem`（`title` / `subtitle` / `action` / `icon`）。
-- 前缀触发的插件：keyword 不匹配前缀时 `return {};`，把查询让给其它插件。
-- `execute()` **不能阻塞 UI 线程**（耗时操作异步处理）。
+- **前缀触发**：重写 `triggerPrefix()` 返回前缀（如 `"="`）。MainWindow 仅在输入以此前缀开头时调用本插件，并**已剥离前缀**传入 `query` —— 插件无需自己判断/剥离前缀。全局插件不重写（默认空串）。
+- **打分与排序**：用 `Matcher::score`（`src/core/matcher.h`）算分填入 `ResultItem::score`；排序、截断（≤8 条）由 MainWindow 跨插件统一处理，插件**不要**自己排序或限制条数。
+- **execute 归属**：`execute()` 只会对产出该结果的插件触发（`owner` 由 MainWindow 标记），插件间互不串扰；`execute()` **不能阻塞 UI 线程**（耗时操作异步处理）。
 - 跨平台差异用 `#ifdef Q_OS_WIN` / `#else` 隔离。
 
 头文件骨架：
@@ -34,6 +34,7 @@ description: 为 launcher 新增一个搜索插件。当用户要添加新插件
 class MyPlugin : public IPlugin {
 public:
     QString           name()  const override { return "MyPlugin"; }
+    QString           triggerPrefix() const override { return "="; }  // 全局插件则省略
     QList<ResultItem> query(const QString &keyword) override;
     void              execute(const ResultItem &item) override;
 };

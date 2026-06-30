@@ -11,15 +11,23 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QScreen>
+#include <QTimer>
 #include <QVBoxLayout>
 
-static constexpr int kWidth     = 620;
-static constexpr int kItemH     = 56;  // 须与 ResultDelegate::sizeHint 同步
-static constexpr int kSearchH   = 52;
-static constexpr int kMaxItems  = 8;
+static constexpr int kWidth          = 620;
+static constexpr int kItemH          = 56;  // 须与 ResultDelegate::sizeHint 同步
+static constexpr int kSearchH        = 52;
+static constexpr int kMaxItems       = 8;
+static constexpr int kQueryDebounceMs = 100;  // 停止输入后再查询，避免逐键查询
 
 MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
     setupUi();
+
+    m_queryTimer = new QTimer(this);
+    m_queryTimer->setSingleShot(true);
+    m_queryTimer->setInterval(kQueryDebounceMs);
+    connect(m_queryTimer, &QTimer::timeout, this, &MainWindow::runQuery);
+
     m_hotkey = new QHotkey(QKeySequence("Alt+Space"), true, this);
     connect(m_hotkey, &QHotkey::activated, this, &MainWindow::toggle);
 }
@@ -132,7 +140,23 @@ void MainWindow::changeEvent(QEvent *e) {
 // ── 搜索与结果 ────────────────────────────────────────────────
 
 void MainWindow::onTextChanged(const QString &text) {
-    const QString kw = text.trimmed();
+    m_pendingKeyword = text.trimmed();
+    if (m_pendingKeyword.isEmpty()) {
+        m_queryTimer->stop();
+        m_list->clear();  // 清空残留项，避免空框回车启动上一条结果
+        m_list->hide();
+        return;
+    }
+    m_queryTimer->start();  // 连续输入只在停顿 kQueryDebounceMs 后查询一次
+}
+
+// 防抖到期后执行。此处是将来把耗时插件查询挪到工作线程的接缝点：
+// 现阶段插件均为内存级即时查询，故同步执行；待 FilePlugin 等慢插件落地，
+// 再在这里改为异步回调 + 失效代次丢弃旧结果。
+void MainWindow::runQuery() {
+    if (!isVisible()) return;  // 窗口已隐藏则无需查询
+
+    const QString kw = m_pendingKeyword;
     if (kw.isEmpty()) {
         m_list->hide();
         return;
@@ -142,7 +166,17 @@ void MainWindow::onTextChanged(const QString &text) {
 
     QList<ResultItem> results;
     for (auto *p : m_plugins) {
-        QList<ResultItem> r = p->query(kw);
+        const QString prefix = p->triggerPrefix();
+        QString sub;
+        if (prefix.isEmpty()) {
+            sub = kw;  // 全局插件：对任意输入生效
+        } else if (kw.startsWith(prefix)) {
+            sub = kw.mid(prefix.length()).trimmed();
+            if (sub.isEmpty()) continue;  // 只键入了前缀本身，尚无查询词
+        } else {
+            continue;  // 前缀不匹配，跳过该插件
+        }
+        QList<ResultItem> r = p->query(sub);
         for (ResultItem &item : r)
             item.owner = p;  // 标记产出插件，execute 时只路由给它
         results += r;
@@ -158,6 +192,15 @@ void MainWindow::onTextChanged(const QString &text) {
         results = results.mid(0, kMaxItems);
 
     showResults(results);
+}
+
+// 防抖窗口期内若用户立即回车，先把待执行查询冲刷掉，
+// 避免回车作用于上一个关键词的过期列表（启动错项）
+void MainWindow::flushPendingQuery() {
+    if (m_queryTimer->isActive()) {
+        m_queryTimer->stop();
+        runQuery();
+    }
 }
 
 void MainWindow::showResults(const QList<ResultItem> &items) {
@@ -205,6 +248,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e) {
             return true;
         case Qt::Key_Return:
         case Qt::Key_Enter:
+            flushPendingQuery();  // 确保作用于最新关键词的结果
             onItemActivated(m_list->count() ? m_list->item(0) : nullptr);
             return true;
         case Qt::Key_Down:
@@ -224,6 +268,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e) {
             return true;
         case Qt::Key_Return:
         case Qt::Key_Enter:
+            flushPendingQuery();  // 确保作用于最新关键词的结果
             onItemActivated(m_list->currentItem());
             return true;
         case Qt::Key_Up:
