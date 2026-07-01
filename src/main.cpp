@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
         settingsDialog->activateWindow();
     });
 
-    win.show();
+    // win.show();
 
     return app.exec();
 }
