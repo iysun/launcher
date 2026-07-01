@@ -7,8 +7,8 @@ CommandPlugin::CommandPlugin() {
     addCommand("help", "显示帮助", [this] { showHelp(); });
 }
 
-void CommandPlugin::addCommand(const QString &id, const QString &desc,
-                               Action run, const QIcon &icon) {
+void CommandPlugin::addCommand(const QString &id, const QString &desc, Action run,
+                               const QIcon &icon) {
     m_cmds.append({id, desc, icon, std::move(run)});
 }
 
@@ -20,16 +20,16 @@ QList<ResultItem> CommandPlugin::query(const QString &keyword) {
     for (const auto &c : m_cmds) {
         int s;
         if (kw.isEmpty()) {
-            s = 0;  // 裸 "/"：列出全部命令（命令面板），同分时由 frecency 把常用项上浮
+            s = 0; // 裸 "/"：列出全部命令（命令面板），同分时由 frecency 把常用项上浮
         } else {
             // 同时按 id 与描述匹配，取较高分：/quit 与 /退出 都能命中
             s = qMax(Matcher::score(c.id, kw), Matcher::score(c.desc, kw));
             if (s < 0) continue;
         }
         ResultItem item;
-        item.title    = "/" + c.id;  // PowerToys 风格：主行展示要敲的命令
-        item.subtitle = c.desc;      // 副行为简要描述
-        item.action   = c.id;        // 稳定键：execute 查表 + frecency 计数
+        item.title    = "/" + c.id; // PowerToys 风格：主行展示要敲的命令
+        item.subtitle = c.desc;     // 副行为简要描述
+        item.action   = c.id;       // 稳定键：execute 查表 + frecency 计数
         item.icon     = c.icon;
         item.score    = s;
         results.append(item);
@@ -47,8 +47,7 @@ void CommandPlugin::execute(const ResultItem &item) {
 }
 
 void CommandPlugin::showHelp() {
-    if (!m_helpDialog)
-        m_helpDialog = new HelpDialog();
+    if (!m_helpDialog) m_helpDialog = new HelpDialog();
 
     QList<QPair<QString, QString>> cmds;
     for (const auto &c : m_cmds)

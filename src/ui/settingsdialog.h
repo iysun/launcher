@@ -21,18 +21,18 @@ protected:
     void mouseReleaseEvent(QMouseEvent *e) override;
 
 private:
-    void setupUi(const QList<IPlugin *> &plugins);
-    void save();
+    void    setupUi(const QList<IPlugin *> &plugins);
+    void    save();
     QLabel *makeSectionLabel(const QString &text);
 
-    AppSettings  *m_settings;
-    HotkeyEdit   *m_hotkeyEdit;
-    QCheckBox          *m_autostartCheck;
-    QList<QCheckBox *>  m_pluginChecks;
-    QList<QString>      m_pluginNames;
-    QListWidget        *m_engineList = nullptr;
+    AppSettings       *m_settings;
+    HotkeyEdit        *m_hotkeyEdit;
+    QCheckBox         *m_autostartCheck;
+    QList<QCheckBox *> m_pluginChecks;
+    QList<QString>     m_pluginNames;
+    QListWidget       *m_engineList = nullptr;
 
-    QPoint m_dragPos;
+    QPoint               m_dragPos;
     static constexpr int kTitleH = 44;
     static constexpr int kWidth  = 480;
 };

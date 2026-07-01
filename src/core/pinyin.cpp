@@ -22,21 +22,21 @@ Result compute(const QString &text) {
             // CJK character with a known pinyin syllable
             const char *syl = kPinyinTable[idx];
             r.offsets.append(fullOff);
-            r.full     += QLatin1String(syl);
+            r.full += QLatin1String(syl);
             r.initials += QLatin1Char(syl[0]);
-            fullOff    += static_cast<int>(strlen(syl));
+            fullOff += static_cast<int>(strlen(syl));
         } else if (ch.isLetter() && ch.unicode() < 0x80) {
             // ASCII letter: pass through verbatim
             r.offsets.append(fullOff);
-            r.full     += ch;
+            r.full += ch;
             r.initials += ch;
-            fullOff    += 1;
+            fullOff += 1;
         } else if (ch.isDigit()) {
             // Digit: pass through verbatim
             r.offsets.append(fullOff);
-            r.full     += ch;
+            r.full += ch;
             r.initials += ch;
-            fullOff    += 1;
+            fullOff += 1;
         } else {
             // Punctuation, space, emoji, non-CJK non-ASCII: skip
             r.offsets.append(-1);
@@ -47,18 +47,18 @@ Result compute(const QString &text) {
 
 QList<int> pinyinMatchedTitlePositions(const Result &py, const QString &kw,
                                        bool useInitials) {
-    const QString &searchStr = useInitials ? py.initials : py.full;
-    const QList<int> hits = Matcher::matchedPositions(searchStr, kw);
+    const QString   &searchStr = useInitials ? py.initials : py.full;
+    const QList<int> hits      = Matcher::matchedPositions(searchStr, kw);
     if (hits.isEmpty()) return {};
 
     // Build a list of (contributing_index_in_search_string, title_char_index)
-    // where "contributing index" means the position in full/initials contributed by that char.
-    // For initials: initials[j] = j-th contributing char → title index
-    // For full: offsets[i] != -1 means char i contributes starting at offsets[i]
-    QList<int> contributing;  // title char indices that contributed to full/initials, in order
+    // where "contributing index" means the position in full/initials contributed by that
+    // char. For initials: initials[j] = j-th contributing char → title index For full:
+    // offsets[i] != -1 means char i contributes starting at offsets[i]
+    QList<int>
+        contributing; // title char indices that contributed to full/initials, in order
     for (int i = 0; i < py.offsets.size(); ++i) {
-        if (py.offsets[i] != -1)
-            contributing.append(i);
+        if (py.offsets[i] != -1) contributing.append(i);
     }
 
     QSet<int> resultSet;
@@ -66,8 +66,7 @@ QList<int> pinyinMatchedTitlePositions(const Result &py, const QString &kw,
     if (useInitials) {
         // initials[j] corresponds to contributing[j]
         for (int hitPos : hits) {
-            if (hitPos < contributing.size())
-                resultSet.insert(contributing[hitPos]);
+            if (hitPos < contributing.size()) resultSet.insert(contributing[hitPos]);
         }
     } else {
         // hits are positions in py.full; map each back to the contributing char
@@ -80,10 +79,8 @@ QList<int> pinyinMatchedTitlePositions(const Result &py, const QString &kw,
             int lo = 0, hi = contributing.size() - 1;
             while (lo < hi) {
                 const int mid = (lo + hi + 1) / 2;
-                if (py.offsets[contributing[mid]] <= hitPos)
-                    lo = mid;
-                else
-                    hi = mid - 1;
+                if (py.offsets[contributing[mid]] <= hitPos) lo = mid;
+                else hi = mid - 1;
             }
             if (lo < contributing.size() && py.offsets[contributing[lo]] <= hitPos)
                 resultSet.insert(contributing[lo]);

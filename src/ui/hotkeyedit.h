@@ -33,8 +33,8 @@ private:
 
 #ifdef Q_OS_WIN
     static LRESULT CALLBACK hookProc(int nCode, WPARAM wParam, LPARAM lParam);
-    static HotkeyEdit *s_instance;
-    HHOOK m_hook = nullptr;
+    static HotkeyEdit      *s_instance;
+    HHOOK                   m_hook = nullptr;
 #endif
 
     QKeySequence m_sequence;

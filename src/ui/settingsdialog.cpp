@@ -17,12 +17,12 @@
 #include <QVBoxLayout>
 
 // ── 颜色常量（Catppuccin Mocha） ──────────────────────────────
-static const char *kBg        = "#1e1e2e";
-static const char *kSurface0  = "#313244";
-static const char *kOverlay0  = "#6c7086";
-static const char *kText      = "#cdd6f4";
-static const char *kBlue      = "#89b4fa";
-static const char *kBorder    = "#45475a";
+static const char *kBg       = "#1e1e2e";
+static const char *kSurface0 = "#313244";
+static const char *kOverlay0 = "#6c7086";
+static const char *kText     = "#cdd6f4";
+static const char *kBlue     = "#89b4fa";
+static const char *kBorder   = "#45475a";
 
 SettingsDialog::SettingsDialog(AppSettings *settings, const QList<IPlugin *> &plugins)
     : QWidget(nullptr), m_settings(settings) {
@@ -44,7 +44,8 @@ SettingsDialog::SettingsDialog(AppSettings *settings, const QList<IPlugin *> &pl
 QLabel *SettingsDialog::makeSectionLabel(const QString &text) {
     auto *lbl = new QLabel(text);
     lbl->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: bold; "
-                               "padding: 0; margin: 0;").arg(kOverlay0));
+                               "padding: 0; margin: 0;")
+                           .arg(kOverlay0));
     return lbl;
 }
 
@@ -62,7 +63,8 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
             border: 1px solid %2;
             border-radius: 10px;
         }
-    )").arg(kBg, kBorder));
+    )")
+                            .arg(kBg, kBorder));
     root->addWidget(card);
 
     auto *outer = new QVBoxLayout(card);
@@ -79,7 +81,8 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     titleLayout->setSpacing(0);
 
     auto *titleLbl = new QLabel("设置", titleBar);
-    titleLbl->setStyleSheet(QString("color: %1; font-size: 15px; font-weight: bold;").arg(kText));
+    titleLbl->setStyleSheet(
+        QString("color: %1; font-size: 15px; font-weight: bold;").arg(kText));
     titleLayout->addWidget(titleLbl);
     titleLayout->addStretch();
 
@@ -94,7 +97,8 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
             border-radius: 4px;
         }
         QPushButton:hover { background: %2; }
-    )").arg(kOverlay0, kSurface0));
+    )")
+                                .arg(kOverlay0, kSurface0));
     titleLayout->addWidget(closeBtn);
     connect(closeBtn, &QPushButton::clicked, this, &SettingsDialog::hide);
 
@@ -103,11 +107,12 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     // ── 分隔线 ───────────────────────────────────────────────
     auto *sep0 = new QFrame(card);
     sep0->setFrameShape(QFrame::HLine);
-    sep0->setStyleSheet(QString("background: %1; border: none; max-height: 1px;").arg(kBorder));
+    sep0->setStyleSheet(
+        QString("background: %1; border: none; max-height: 1px;").arg(kBorder));
     outer->addWidget(sep0);
 
     // ── 内容区 ───────────────────────────────────────────────
-    auto *content = new QWidget(card);
+    auto *content       = new QWidget(card);
     auto *contentLayout = new QVBoxLayout(content);
     contentLayout->setContentsMargins(20, 16, 20, 16);
     contentLayout->setSpacing(12);
@@ -122,7 +127,8 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
             font-size: 13px;
         }
         QLineEdit:focus { border-color: %4; }
-    )").arg(kSurface0, kText, kBorder, kBlue);
+    )")
+                                   .arg(kSurface0, kText, kBorder, kBlue);
 
     const QString checkStyle = QString(R"(
         QCheckBox {
@@ -144,7 +150,8 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         QCheckBox::indicator:checked:after {
             content: "✓";
         }
-    )").arg(kText, kBorder, kSurface0, kBlue);
+    )")
+                                   .arg(kText, kBorder, kSurface0, kBlue);
 
     // 热键
     contentLayout->addWidget(makeSectionLabel("热键"));
@@ -156,7 +163,9 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     // 开机自启动
     auto *sep1 = new QFrame(content);
     sep1->setFrameShape(QFrame::HLine);
-    sep1->setStyleSheet(QString("background: %1; border: none; max-height: 1px; margin: 4px 0;").arg(kBorder));
+    sep1->setStyleSheet(
+        QString("background: %1; border: none; max-height: 1px; margin: 4px 0;")
+            .arg(kBorder));
     contentLayout->addWidget(sep1);
 
     m_autostartCheck = new QCheckBox("开机自启动", content);
@@ -168,7 +177,9 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     if (!plugins.isEmpty()) {
         auto *sep2 = new QFrame(content);
         sep2->setFrameShape(QFrame::HLine);
-        sep2->setStyleSheet(QString("background: %1; border: none; max-height: 1px; margin: 4px 0;").arg(kBorder));
+        sep2->setStyleSheet(
+            QString("background: %1; border: none; max-height: 1px; margin: 4px 0;")
+                .arg(kBorder));
         contentLayout->addWidget(sep2);
 
         contentLayout->addWidget(makeSectionLabel("插件"));
@@ -176,7 +187,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         const QStringList disabled = m_settings->disabledPlugins();
         for (IPlugin *p : plugins) {
             const QString name = p->name();
-            auto *cb = new QCheckBox(name, content);
+            auto         *cb   = new QCheckBox(name, content);
             cb->setChecked(!disabled.contains(name));
             cb->setStyleSheet(checkStyle);
             contentLayout->addWidget(cb);
@@ -189,12 +200,14 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     {
         auto *sep = new QFrame(content);
         sep->setFrameShape(QFrame::HLine);
-        sep->setStyleSheet(QString("background: %1; border: none; max-height: 1px; margin: 4px 0;").arg(kBorder));
+        sep->setStyleSheet(
+            QString("background: %1; border: none; max-height: 1px; margin: 4px 0;")
+                .arg(kBorder));
         contentLayout->addWidget(sep);
 
         contentLayout->addWidget(makeSectionLabel("网页搜索引擎优先级"));
 
-        auto *row = new QWidget(content);
+        auto *row       = new QWidget(content);
         auto *rowLayout = new QHBoxLayout(row);
         rowLayout->setContentsMargins(0, 0, 0, 0);
         rowLayout->setSpacing(8);
@@ -210,19 +223,27 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
             QListWidget::item { padding: 4px 8px; }
             QListWidget::item:selected { background: %4; color: #1e1e2e; }
             QListWidget::item:hover:!selected { background: #45475a; }
-        )").arg(kSurface0, kText, kBorder, kBlue));
+        )")
+                                        .arg(kSurface0, kText, kBorder, kBlue));
 
         // 按已保存顺序填充引擎名称，UserRole 存 id
-        const QStringList savedOrder = m_settings->webEngineOrder();
+        const QStringList      savedOrder = m_settings->webEngineOrder();
         const QList<WebEngine> allEngines = WebPlugin::allEngines();
         // 先按 savedOrder 排，再追加 savedOrder 里没有的（兼容日后新增引擎）
         QList<WebEngine> ordered;
         for (const QString &id : savedOrder)
             for (const WebEngine &e : allEngines)
-                if (e.id == id) { ordered.append(e); break; }
+                if (e.id == id) {
+                    ordered.append(e);
+                    break;
+                }
         for (const WebEngine &e : allEngines) {
             bool found = false;
-            for (const WebEngine &o : ordered) if (o.id == e.id) { found = true; break; }
+            for (const WebEngine &o : ordered)
+                if (o.id == e.id) {
+                    found = true;
+                    break;
+                }
             if (!found) ordered.append(e);
         }
         for (const WebEngine &e : ordered) {
@@ -240,9 +261,10 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
             }
             QPushButton:hover { background: #45475a; }
             QPushButton:disabled { color: %3; }
-        )").arg(kSurface0, kText, kBorder);
+        )")
+                                     .arg(kSurface0, kText, kBorder);
 
-        auto *btnCol = new QWidget(row);
+        auto *btnCol    = new QWidget(row);
         auto *btnLayout = new QVBoxLayout(btnCol);
         btnLayout->setContentsMargins(0, 0, 0, 0);
         btnLayout->setSpacing(6);
@@ -279,10 +301,11 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     // ── 底部按钮 ─────────────────────────────────────────────
     auto *sep3 = new QFrame(card);
     sep3->setFrameShape(QFrame::HLine);
-    sep3->setStyleSheet(QString("background: %1; border: none; max-height: 1px;").arg(kBorder));
+    sep3->setStyleSheet(
+        QString("background: %1; border: none; max-height: 1px;").arg(kBorder));
     outer->addWidget(sep3);
 
-    auto *footer = new QWidget(card);
+    auto *footer       = new QWidget(card);
     auto *footerLayout = new QHBoxLayout(footer);
     footerLayout->setContentsMargins(20, 12, 20, 12);
     footerLayout->setSpacing(8);
@@ -301,20 +324,22 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     cancelBtn->setStyleSheet(btnBase + QString(R"(
         QPushButton { background: %1; color: %2; }
         QPushButton:hover { background: #45475a; }
-    )").arg(kSurface0, kText));
+    )")
+                                           .arg(kSurface0, kText));
     footerLayout->addWidget(cancelBtn);
 
     auto *saveBtn = new QPushButton("保存", footer);
     saveBtn->setStyleSheet(btnBase + QString(R"(
         QPushButton { background: %1; color: #1e1e2e; font-weight: bold; }
         QPushButton:hover { background: #7aa2f7; }
-    )").arg(kBlue));
+    )")
+                                         .arg(kBlue));
     footerLayout->addWidget(saveBtn);
 
     outer->addWidget(footer);
 
     connect(cancelBtn, &QPushButton::clicked, this, &SettingsDialog::hide);
-    connect(saveBtn,   &QPushButton::clicked, this, &SettingsDialog::save);
+    connect(saveBtn, &QPushButton::clicked, this, &SettingsDialog::save);
 }
 
 // ── 保存 ──────────────────────────────────────────────────────
@@ -328,8 +353,7 @@ void SettingsDialog::save() {
 
     QStringList disabled;
     for (int i = 0; i < m_pluginChecks.size(); ++i) {
-        if (!m_pluginChecks[i]->isChecked())
-            disabled.append(m_pluginNames[i]);
+        if (!m_pluginChecks[i]->isChecked()) disabled.append(m_pluginNames[i]);
     }
     m_settings->setDisabledPlugins(disabled);
 

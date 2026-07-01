@@ -25,10 +25,10 @@ private:
     void buildLayout();
     void rebuildCommands();
 
-    QVBoxLayout *m_cmdLayout = nullptr;  // 命令列表区，setCommands 时重建
+    QVBoxLayout *m_cmdLayout = nullptr; // 命令列表区，setCommands 时重建
     QList<QPair<QString, QString>> m_cmds;
 
-    QPoint m_dragPos;
+    QPoint               m_dragPos;
     static constexpr int kTitleH = 44;
     static constexpr int kWidth  = 480;
 };

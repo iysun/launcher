@@ -12,20 +12,20 @@ class CommandPlugin : public IPlugin {
 public:
     using Action = std::function<void()>;
 
-    CommandPlugin();  // 自注册内置 help 命令
+    CommandPlugin(); // 自注册内置 help 命令
 
-    QString           name()  const override { return "Commands"; }
+    QString           name() const override { return "Commands"; }
     QString           triggerPrefix() const override { return "/"; }
     QList<ResultItem> query(const QString &keyword) override;
     void              execute(const ResultItem &item) override;
 
     // id：敲入的命令词（如 quit），兼作显示主行 "/id" 与 frecency 稳定键；
     // desc：简要描述，作副行，与 id 一并参与模糊匹配；run：执行动作。
-    void addCommand(const QString &id, const QString &desc,
-                    Action run, const QIcon &icon = {});
+    void addCommand(const QString &id, const QString &desc, Action run,
+                    const QIcon &icon = {});
 
 private:
-    void showHelp();  // 弹出帮助：用法 + 当前全部命令
+    void showHelp(); // 弹出帮助：用法 + 当前全部命令
 
     struct Command {
         QString id, desc;
@@ -33,5 +33,5 @@ private:
         Action  run;
     };
     QList<Command> m_cmds;
-    HelpDialog    *m_helpDialog = nullptr;  // 懒初始化，持有所有权
+    HelpDialog    *m_helpDialog = nullptr; // 懒初始化，持有所有权
 };

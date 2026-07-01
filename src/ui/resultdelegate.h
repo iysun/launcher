@@ -10,10 +10,10 @@ public:
     void  paint(QPainter *p, const QStyleOptionViewItem &opt,
                 const QModelIndex &index) const override;
     QSize sizeHint(const QStyleOptionViewItem &opt,
-                   const QModelIndex &index) const override;
+                   const QModelIndex          &index) const override;
 
     void setKeyword(const QString &kw) { m_kw = kw; }
 
 private:
-    QString m_kw;  // 当前搜索关键字，用于标题高亮
+    QString m_kw; // 当前搜索关键字，用于标题高亮
 };

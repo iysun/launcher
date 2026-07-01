@@ -4,10 +4,10 @@
 #include <QPainter>
 #include <QSet>
 
-static constexpr int kPad  = 16;  // 左右边距
-static constexpr int kIcon = 32;  // 图标边长
-static constexpr int kGap  = 12;  // 图标与文字间距
-static constexpr int kRowH = 56;  // 行高（须与 mainwindow.cpp kItemH 同步）
+static constexpr int kPad  = 16; // 左右边距
+static constexpr int kIcon = 32; // 图标边长
+static constexpr int kGap  = 12; // 图标与文字间距
+static constexpr int kRowH = 56; // 行高（须与 mainwindow.cpp kItemH 同步）
 
 void ResultDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt,
                            const QModelIndex &index) const {
@@ -19,8 +19,7 @@ void ResultDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt,
     const bool selected = opt.state & QStyle::State_Selected;
 
     // 背景（delegate 自行绘制，CSS 不再处理 item 状态）
-    if (selected)
-        p->fillRect(opt.rect, QColor("#313244"));
+    if (selected) p->fillRect(opt.rect, QColor("#313244"));
     else if (opt.state & QStyle::State_MouseOver)
         p->fillRect(opt.rect, QColor("#181825"));
 
@@ -39,9 +38,9 @@ void ResultDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt,
     tf.setPointSize(11);
     tf.setBold(true);
     p->setFont(tf);
-    const QRect  titleR(textR.left(), textR.top() + 6, textR.width(), half);
-    const QColor base = selected ? QColor("#89b4fa") : QColor("#cdd6f4");
-    const QColor hi   = selected ? QColor("#f5e0dc") : QColor("#89b4fa");
+    const QRect   titleR(textR.left(), textR.top() + 6, textR.width(), half);
+    const QColor  base = selected ? QColor("#89b4fa") : QColor("#cdd6f4");
+    const QColor  hi   = selected ? QColor("#f5e0dc") : QColor("#89b4fa");
     const QString disp =
         p->fontMetrics().elidedText(item.title, Qt::ElideRight, titleR.width());
     // 拼音命中时使用预计算的 title 字符下标（过滤超出省略范围的位置）；
@@ -59,8 +58,8 @@ void ResultDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt,
         p->drawText(titleR, Qt::AlignLeft | Qt::AlignVCenter, disp);
     } else {
         const QSet<int> hitSet(hits.begin(), hits.end());
-        int x = titleR.left();
-        auto drawSeg = [&](const QString &s, const QColor &col) {
+        int             x       = titleR.left();
+        auto            drawSeg = [&](const QString &s, const QColor &col) {
             if (s.isEmpty()) return;
             p->setPen(col);
             const QRect seg(x, titleR.top(), titleR.right() - x, titleR.height());
@@ -71,7 +70,7 @@ void ResultDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt,
         int i = 0;
         while (i < disp.length()) {
             const bool hit = hitSet.contains(i);
-            int j = i;
+            int        j   = i;
             while (j < disp.length() && hitSet.contains(j) == hit)
                 ++j;
             drawSeg(disp.mid(i, j - i), hit ? hi : base);
@@ -85,14 +84,15 @@ void ResultDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt,
     p->setFont(sf);
     p->setPen(QColor("#6c7086"));
     const QRect subR(textR.left(), textR.top() + half, textR.width(), half - 6);
-    p->drawText(subR, Qt::AlignLeft | Qt::AlignVCenter,
-                p->fontMetrics().elidedText(item.subtitle, Qt::ElideMiddle, subR.width()));
+    p->drawText(
+        subR, Qt::AlignLeft | Qt::AlignVCenter,
+        p->fontMetrics().elidedText(item.subtitle, Qt::ElideMiddle, subR.width()));
 
     p->restore();
 }
 
 QSize ResultDelegate::sizeHint(const QStyleOptionViewItem &opt,
-                               const QModelIndex &index) const {
+                               const QModelIndex          &index) const {
     Q_UNUSED(opt);
     Q_UNUSED(index);
     return QSize(0, kRowH);

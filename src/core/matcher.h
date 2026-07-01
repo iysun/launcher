@@ -10,4 +10,4 @@ int score(const QString &text, const QString &keyword);
 // 返回 text 中与 keyword 命中的字符下标（升序，用于高亮）：
 // 连续子串命中返回该区间下标，否则返回子序列命中位置；无命中返回空。
 QList<int> matchedPositions(const QString &text, const QString &keyword);
-}
+} // namespace Matcher

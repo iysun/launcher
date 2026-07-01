@@ -7,7 +7,8 @@
 #include <QSettings>
 #include <QStandardPaths>
 
-static const char *kRunKey = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+static const char *kRunKey =
+    "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 static const char *kAppName = "launcher";
 
 AppSettings::AppSettings(QObject *parent) : QObject(parent) {
@@ -48,21 +49,22 @@ void AppSettings::save() const {
         orderArr.append(id);
     obj["webEngineOrder"] = orderArr;
 
-    const QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
-                         + "/settings.json";
+    const QString path =
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
+        "/settings.json";
     QFile f(path);
-    if (f.open(QIODevice::WriteOnly))
-        f.write(QJsonDocument(obj).toJson());
+    if (f.open(QIODevice::WriteOnly)) f.write(QJsonDocument(obj).toJson());
 }
 
 void AppSettings::load() {
-    const QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
-                         + "/settings.json";
+    const QString path =
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
+        "/settings.json";
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly)) return;
 
     const QJsonObject obj = QJsonDocument::fromJson(f.readAll()).object();
-    if (obj.contains("hotkey"))    m_hotkey    = obj["hotkey"].toString(m_hotkey);
+    if (obj.contains("hotkey")) m_hotkey = obj["hotkey"].toString(m_hotkey);
     if (obj.contains("autostart")) m_autostart = obj["autostart"].toBool(m_autostart);
     if (obj.contains("disabledPlugins")) {
         m_disabledPlugins.clear();
@@ -80,9 +82,9 @@ void AppSettings::applyAutostart(bool on) const {
 #ifdef Q_OS_WIN
     QSettings reg(kRunKey, QSettings::NativeFormat);
     if (on)
-        reg.setValue(kAppName, QCoreApplication::applicationFilePath().replace("/", "\\"));
-    else
-        reg.remove(kAppName);
+        reg.setValue(kAppName,
+                     QCoreApplication::applicationFilePath().replace("/", "\\"));
+    else reg.remove(kAppName);
 #else
     Q_UNUSED(on)
 #endif

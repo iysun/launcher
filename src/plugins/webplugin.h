@@ -7,7 +7,7 @@ class AppSettings;
 struct WebEngine {
     QString id;
     QString name;
-    QString urlTemplate;  // %1 为 URL 编码后的关键词
+    QString urlTemplate; // %1 为 URL 编码后的关键词
 };
 
 // 网页搜索，"?" 前缀触发。
@@ -16,7 +16,7 @@ class WebPlugin : public IPlugin {
 public:
     explicit WebPlugin(AppSettings *settings = nullptr);
 
-    QString           name()          const override { return "Web"; }
+    QString           name() const override { return "Web"; }
     QString           triggerPrefix() const override { return "?"; }
     QList<ResultItem> query(const QString &keyword) override;
     void              execute(const ResultItem &item) override;

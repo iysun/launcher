@@ -9,10 +9,10 @@ class AppSettings : public QObject {
 public:
     explicit AppSettings(QObject *parent = nullptr);
 
-    QString     hotkey()          const { return m_hotkey; }
-    bool        autostart()       const { return m_autostart; }
+    QString     hotkey() const { return m_hotkey; }
+    bool        autostart() const { return m_autostart; }
     QStringList disabledPlugins() const { return m_disabledPlugins; }
-    QStringList webEngineOrder()  const { return m_webEngineOrder; }
+    QStringList webEngineOrder() const { return m_webEngineOrder; }
 
     void setHotkey(const QString &seq);
     void setAutostart(bool on);
@@ -28,8 +28,8 @@ private:
     void load();
     void applyAutostart(bool on) const;
 
-    QString     m_hotkey          = "Alt+Space";
-    bool        m_autostart       = false;
+    QString     m_hotkey    = "Alt+Space";
+    bool        m_autostart = false;
     QStringList m_disabledPlugins;
-    QStringList m_webEngineOrder  = {"google", "bing", "baidu", "github"};
+    QStringList m_webEngineOrder = {"google", "bing", "baidu", "github"};
 };

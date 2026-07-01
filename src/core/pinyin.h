@@ -8,9 +8,10 @@ namespace Pinyin {
 // offsets.size() == text.length() always; offsets[i] == -1 when character i
 // contributes nothing (punctuation, symbol, or unmapped CJK glyph).
 struct Result {
-    QString    full;      // concatenated syllables, lowercase (e.g. "weixin")
-    QString    initials;  // one char per contributing title char (e.g. "wx")
-    QList<int> offsets;   // offsets[i] = start of char i's contribution in full; -1 if skipped
+    QString full;     // concatenated syllables, lowercase (e.g. "weixin")
+    QString initials; // one char per contributing title char (e.g. "wx")
+    QList<int>
+        offsets; // offsets[i] = start of char i's contribution in full; -1 if skipped
 };
 
 // Compute pinyin for text. O(n), reads a static read-only table — thread-safe.
