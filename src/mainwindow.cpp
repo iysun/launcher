@@ -15,8 +15,6 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
-#include <QPainter>
-#include <QPixmap>
 #include <QScreen>
 #include <QSystemTrayIcon>
 #include <QTimer>
@@ -53,7 +51,7 @@ MainWindow::MainWindow(AppSettings *settings, QWidget *parent)
 
     // ── 系统托盘 ──────────────────────────────────────────────
     m_tray = new QSystemTrayIcon(this);
-    m_tray->setIcon(makeTrayIcon());
+    m_tray->setIcon(QIcon(":/icons/tray.png"));
     m_tray->setToolTip("Launcher");
 
     auto *trayMenu = new QMenu();
@@ -75,21 +73,6 @@ void MainWindow::addPlugin(IPlugin *plugin) {
 }
 
 // ── UI ────────────────────────────────────────────────────────
-
-QIcon MainWindow::makeTrayIcon() {
-    // 放大镜图标：Catppuccin blue 圆圈 + 把手，深色背景透明
-    QPixmap pix(32, 32);
-    pix.fill(Qt::transparent);
-    QPainter p(&pix);
-    p.setRenderHint(QPainter::Antialiasing);
-
-    const QColor blue("#89b4fa");
-    p.setPen(QPen(blue, 2.5));
-    p.setBrush(Qt::NoBrush);
-    p.drawEllipse(QRectF(4, 4, 16, 16));    // 镜圈
-    p.drawLine(QLineF(17.5, 17.5, 26, 26)); // 把手
-    return QIcon(pix);
-}
 
 void MainWindow::setupUi() {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);

@@ -29,6 +29,7 @@ qt_add_executable(launcher WIN32
     src/ui/settingsdialog.cpp
     src/ui/hotkeyedit.cpp
     src/ui/helpdialog.cpp
+    resources/resources.qrc
 )
 
 target_include_directories(launcher PRIVATE src)

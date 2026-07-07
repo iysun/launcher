@@ -32,7 +32,6 @@ private slots:
 
 private:
     void  setupUi();
-    QIcon makeTrayIcon();
     void  showResults(const QList<ResultItem> &items);
     void  mergeAndShow(); // 合并 base+async → 排序 → 截断 → 主线程装饰 → 展示
     void  onAsyncResults(IPlugin                 *p,
