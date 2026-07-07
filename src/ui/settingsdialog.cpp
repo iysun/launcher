@@ -179,14 +179,35 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
 
     contentLayout->addWidget(makeSectionLabel(I18n::t("settings.language")));
     m_languageCombo = new QComboBox(content);
-    m_languageCombo->setStyleSheet(QString(R"(
+    const QString comboStyle = QString(R"(
         QComboBox {
             background: %1; color: %2;
             border: 1px solid %3; border-radius: 6px;
             padding: 4px 8px; font-size: 13px;
+            min-height: 20px;
         }
+        QComboBox:hover { border-color: %5; }
+        QComboBox:focus, QComboBox:on { border-color: %4; }
+        QComboBox::drop-down {
+            subcontrol-origin: padding;
+            subcontrol-position: top right;
+            width: 24px; border: none; background: transparent;
+        }
+        QComboBox::down-arrow {
+            image: url(:/icons/chevron-down.png);
+            width: 12px; height: 12px;
+        }
+        QComboBox QAbstractItemView {
+            background: %1; color: %2;
+            border: 1px solid %3; border-radius: 6px;
+            outline: 0; padding: 2px;
+        }
+        QComboBox QAbstractItemView::item { padding: 4px 8px; min-height: 22px; }
+        QComboBox QAbstractItemView::item:selected { background: %4; color: #1e1e2e; }
+        QComboBox QAbstractItemView::item:hover:!selected { background: %3; }
     )")
-                                       .arg(kSurface0, kText, kBorder));
+                                       .arg(kSurface0, kText, kBorder, kBlue, kOverlay0);
+    m_languageCombo->setStyleSheet(comboStyle);
     for (const auto &lang : I18n::instance().availableLanguages())
         m_languageCombo->addItem(lang.second, lang.first);
     contentLayout->addWidget(m_languageCombo);

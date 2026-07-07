@@ -2,6 +2,7 @@
   <qresource prefix="/icons">
     <file alias="tray.png">icons/tray.png</file>
     <file alias="check.png">icons/check.png</file>
+    <file alias="chevron-down.png">icons/chevron-down.png</file>
   </qresource>
   <qresource prefix="/i18n">
     <file alias="zh.json">i18n/zh.json</file>
