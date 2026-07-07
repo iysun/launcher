@@ -12,7 +12,7 @@
 | `/runapp` | 运行-验证循环：启动应用并按清单核对 Alt+Space / 搜索 / 导航等核心交互 |
 | `add-plugin` 技能 | 新插件流水线：生成 IPlugin 骨架 → 注册 CMake/main.cpp → 构建验证 → 文档判断 |
 
-> 构建依赖的本机 Qt/MinGW 路径由 `.claude/settings.local.json` 注入（`QT_DIR` / `MINGW`，不入库，需各自配置）。
+> 构建依赖的本机 Qt/MinGW 路径由 `.claude/settings.local.json` 注入（`QT_DIR` / `MINGW`，不入库，需各自配置）。详见下方「环境变量」小节。
 
 ## 维护约定（文档）
 
@@ -51,13 +51,45 @@ python -m aqt install-qt linux desktop 6.8.3 linux_gcc_64 --outputdir <Qt安装�
 
 > `<Qt安装目录>` 由你自己决定，例如 Windows 上的 `D:\Qt` 或 Linux 上的 `~/Qt`。
 
+### 环境变量
+
+| 变量 | 说明 | 示例（Windows） |
+|------|------|------|
+| `QT_DIR` | Qt 安装目录，精确到架构/工具链那一层 | `D:\Qt\6.8.3\mingw_64` |
+| `MINGW` | 与 Qt 二进制配套的 MinGW `bin` 目录（**仅 Windows** 需要，版本必须与 Qt 官方发布的编译器一致，见 [docs/notes/mingw-abi-mismatch.md](docs/notes/mingw-abi-mismatch.md)） | `D:\Qt\Tools\mingw1310_64\bin` |
+
+这两个变量被 `CMakePresets.json`（`$env{QT_DIR}` / `$env{MINGW}`）、根目录 `Makefile`、`.claude/settings.local.json`（AI harness）共同依赖。缺失时的典型报错是 `CMAKE_CXX_COMPILER: /g++.exe is not a full path...`（`MINGW` 被解析成空字符串），容易误以为是编译器没装。
+
+- **AI harness（Claude Code）**：由 `.claude/settings.local.json` 的 `env` 字段注入，该文件不入库，需各自配置；改动后需重启会话才生效。
+- **人工终端**：每次新开终端都要重新设置，否则会报上面那个报错；建议写进 shell 启动脚本持久化一次：
+  - PowerShell：加到 `$PROFILE`（`$env:QT_DIR = "..."` / `$env:MINGW = "..."`），新开的终端自动生效
+  - Bash/Zsh（Linux）：加到 `~/.bashrc` / `~/.zshrc`；Linux 一般不需要 `MINGW`，仅当 Qt 装在非标准路径时设 `CMAKE_PREFIX_PATH`
+
 ---
 
 ## 构建步骤
 
-### Windows
+### 快捷方式：Makefile
 
-推荐用 **CMakePresets**（`CMakePresets.json` 已入库，需 CMake ≥ 3.21；仅装 3.20 的用下方 `<details>` 手写命令），把机器相关路径留在环境变量里、preset 只引用，免去手敲一长串 `-D`：
+根目录 `Makefile` 把下面的 `cmake --preset` / `ctest --preset` 命令收敛成短别名，跨平台通过 `$(OS)` 自动选 `windows`/`linux` preset（可用 `PRESET=xxx` 覆盖），执行前仍需设置好上面的 `QT_DIR`/`MINGW`（Windows），否则 `configure` 会被内置的 `check-env` 目标提前拦截并给出提示：
+
+| 命令 | 作用 |
+|------|------|
+| `make` / `make build` | 配置 + 编译（默认目标） |
+| `make configure` | 仅配置 CMake（首次或 `CMakeLists.txt` 变更后） |
+| `make run` | 构建后运行 launcher |
+| `make test` | 跑 ctest（等价于 `ctest --preset windows/linux`） |
+| `make deploy` | 部署 Qt 运行库（`windeployqt`，仅 Windows） |
+| `make clean` | 删除 `build/` 目录 |
+| `make rebuild` | `clean` + `build` |
+| `make submodules` | 初始化 git 子模块（QHotkey） |
+| `make help` | 列出所有目标 |
+
+Windows 上用 `& "$env:MINGW\mingw32-make.exe" <target>`（与实际编译器版本配套）或 PATH 上任意 GNU Make 均可——Makefile 本身只编排 cmake 命令，不直接参与编译，所以不要求是特定的 make 实现。
+
+### Windows（底层命令）
+
+不想用 Makefile，或需要理解 Makefile 具体做了什么时，可参考以下等价的原始命令。推荐用 **CMakePresets**（`CMakePresets.json` 已入库，需 CMake ≥ 3.21；仅装 3.20 的用下方 `<details>` 手写命令），把机器相关路径留在环境变量里、preset 只引用，免去手敲一长串 `-D`：
 
 ```powershell
 # 设置路径环境变量（根据你的实际安装目录修改；AI harness 由 .claude/settings.local.json 注入）
@@ -110,7 +142,7 @@ cmake --build --preset linux
 ### 运行测试
 
 ```bash
-ctest --preset windows   # 或 linux
+ctest --preset windows   # 或 linux；等价于 make test
 ```
 
 > Windows 上 test preset 已把 `QT_DIR\bin` 与 `MINGW` 注入测试进程的 PATH，
