@@ -210,3 +210,23 @@ public:
 3. 在 `main.cpp` 注册：`win.addPlugin(new MyPlugin)`
 
 跨平台差异用 `#ifdef Q_OS_WIN` / `#else` 隔离。
+
+---
+
+## 自定义语言
+
+`I18n`（`src/core/i18n.h` / `.cpp`）是极简 i18n：语言包是**用户数据目录**（`QStandardPaths::AppDataLocation`）下的 `i18n/<code>.json` 文件，不是编译期资源，运行时可直接编辑/新增。
+
+- 内置 `zh`（简体中文）/ `en`（English）两个语言包源文件在 `resources/i18n/zh.json`、`resources/i18n/en.json`，通过 `resources/resources.qrc` 的 `/i18n` prefix 打进 Qt 资源；首次运行时 `I18n::ensureDefaultFiles()` 会把它们落盘到 `<datadir>/i18n/`（`/settings` 命令的 "打开配置/数据目录" 可以直接定位到这里）。落盘只在目标文件不存在时写入，不会覆盖用户已编辑的内容。
+- 语言文件格式：
+  ```json
+  {
+      "meta": { "code": "ja", "name": "日本語" },
+      "strings": { "settings.title": "設定", "...": "..." }
+  }
+  ```
+  `meta.code` 是语言标识（存进 `settings.json` 的 `language` 字段），`meta.name` 是设置页语言下拉框里显示的名字。
+- **新增一个语言**：在 `<datadir>/i18n/` 下新建一个 `<code>.json`（照抄 `zh.json`/`en.json` 的 key 结构，把 value 换成目标语言），`I18n::availableLanguages()` 会在设置页打开时自动扫描该目录下所有 `*.json`，无需改代码、无需重新编译。
+- **翻译不全时的回退链**：当前语言缺 key → 回退到内置英文（`m_englishFallback`，永远从 `:/i18n/en.json` 加载，不受用户是否改过 datadir 里的 `en.json` 影响）→ 仍缺则直接显示 key 本身（如 `settings.title`），便于一眼发现遗漏而不是空白/崩溃。
+- **语言切换不做运行时热切换**：`I18n::init()` 只在启动时调用一次；`/settings` 保存时若语言变更，会弹窗询问是否立即重启进程（`SettingsDialog::save()`）。
+- 新增字符串 key：先在 `resources/i18n/zh.json`、`resources/i18n/en.json` 两个内置文件里都补上（缺了会走英文/key 回退，不会崩溃，但用户自定义语言文件不会自动同步，需要使用者自行补齐）。
