@@ -128,7 +128,7 @@ src/
 │   ├── matcher.h / .cpp        # 共享匹配/打分（子串四档 + 子序列模糊），跨插件统一排序的依据
 │   ├── pinyin.h / .cpp         # CJK → 拼音转换，支持全拼/首字母搜索
 │   ├── usagestore.h / .cpp     # frecency 持久化（usage.json）
-│   └── appsettings.h / .cpp    # 用户配置持久化（settings.json）：热键、开机自启、插件启停
+│   └── appsettings.h / .cpp    # 用户配置持久化（settings.json）：热键、开机自启、插件启停、文件搜索目录
 ├── plugin/
 │   ├── iplugin.h               # IPlugin 接口（含 triggerPrefix 前缀路由）
 │   └── resultitem.h            # ResultItem 数据结构（含 owner / score，已注册 QMetaType）

@@ -19,6 +19,7 @@ protected:
     void mousePressEvent(QMouseEvent *e) override;
     void mouseMoveEvent(QMouseEvent *e) override;
     void mouseReleaseEvent(QMouseEvent *e) override;
+    void showEvent(QShowEvent *e) override;
 
 private:
     void    setupUi(const QList<IPlugin *> &plugins);
@@ -31,6 +32,7 @@ private:
     QList<QCheckBox *> m_pluginChecks;
     QList<QString>     m_pluginNames;
     QListWidget       *m_engineList = nullptr;
+    QListWidget       *m_pathList   = nullptr;
 
     QPoint               m_dragPos;
     static constexpr int kTitleH = 44;

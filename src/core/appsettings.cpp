@@ -4,6 +4,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMutexLocker>
 #include <QSettings>
 #include <QStandardPaths>
 
@@ -11,8 +12,30 @@ static const char *kRunKey =
     "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 static const char *kAppName = "launcher";
 
+// 文件搜索默认目录：桌面/文档/下载/图片，去重（部分平台上某些 Location 可能落到同一目录）
+QStringList AppSettings::defaultFileSearchPaths() {
+    QStringList roots;
+    const auto  types = {
+        QStandardPaths::DesktopLocation,
+        QStandardPaths::DocumentsLocation,
+        QStandardPaths::DownloadLocation,
+        QStandardPaths::PicturesLocation,
+    };
+    for (auto t : types) {
+        const QString dir = QStandardPaths::writableLocation(t);
+        if (!dir.isEmpty() && !roots.contains(dir)) roots.append(dir);
+    }
+    return roots;
+}
+
 AppSettings::AppSettings(QObject *parent) : QObject(parent) {
+    m_fileSearchPaths = defaultFileSearchPaths(); // load() 若有存档值会覆盖
     load();
+}
+
+QStringList AppSettings::fileSearchPaths() const {
+    QMutexLocker lock(&m_fileSearchPathsMutex);
+    return m_fileSearchPaths;
 }
 
 void AppSettings::setHotkey(const QString &seq) {
@@ -34,6 +57,11 @@ void AppSettings::setWebEngineOrder(const QStringList &order) {
     m_webEngineOrder = order;
 }
 
+void AppSettings::setFileSearchPaths(const QStringList &paths) {
+    QMutexLocker lock(&m_fileSearchPathsMutex);
+    m_fileSearchPaths = paths;
+}
+
 void AppSettings::save() const {
     QJsonObject obj;
     obj["hotkey"]    = m_hotkey;
@@ -48,6 +76,11 @@ void AppSettings::save() const {
     for (const QString &id : m_webEngineOrder)
         orderArr.append(id);
     obj["webEngineOrder"] = orderArr;
+
+    QJsonArray pathsArr;
+    for (const QString &p : fileSearchPaths()) // 走加锁 getter，保持访问该字段一律过锁
+        pathsArr.append(p);
+    obj["fileSearchPaths"] = pathsArr;
 
     const QString path =
         QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
@@ -75,6 +108,13 @@ void AppSettings::load() {
         m_webEngineOrder.clear();
         for (const QJsonValue &v : obj["webEngineOrder"].toArray())
             m_webEngineOrder.append(v.toString());
+    }
+    if (obj.contains("fileSearchPaths")) {
+        QStringList paths;
+        for (const QJsonValue &v : obj["fileSearchPaths"].toArray())
+            paths.append(v.toString());
+        QMutexLocker lock(&m_fileSearchPathsMutex);
+        m_fileSearchPaths = paths;
     }
 }
 

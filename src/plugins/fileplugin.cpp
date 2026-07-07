@@ -1,4 +1,5 @@
 #include "fileplugin.h"
+#include "core/appsettings.h"
 #include "core/matcher.h"
 #include <QDesktopServices>
 #include <QDirIterator>
@@ -11,8 +12,10 @@
 static constexpr int kMaxVisit   = 8000; // 访问条目数封顶，超出即停
 static constexpr int kMaxResults = 200;  // 命中数封顶（MainWindow 还会再截到 kMaxItems）
 
+FilePlugin::FilePlugin(AppSettings *settings) : m_settings(settings) {}
+
+// 无设置对象时的兜底默认目录，去重（部分平台上某些 Location 可能落到同一目录）
 QStringList FilePlugin::searchRoots() {
-    // 去重：部分平台上某些 Location 可能落到同一目录
     QStringList roots;
     const auto  types = {
         QStandardPaths::DesktopLocation,
@@ -27,9 +30,10 @@ QStringList FilePlugin::searchRoots() {
     return roots;
 }
 
-// 注意：本函数在工作线程执行（runsAsync），只读 QStandardPaths + 遍历文件名 + 打分，
-// 无共享可变状态，可重入。**不要**在此创建 QIcon/QPixmap（仅限 GUI 线程）——图标交
-// decorate 补。
+// 注意：本函数在工作线程执行（runsAsync），遍历文件名 + 打分，可重入。搜索根来自
+// AppSettings::fileSearchPaths()（内部加锁，可跨线程安全读取）——m_settings 非空时尊重
+// 用户配置（包括显式清空为"不搜索"），为空才回退到 searchRoots() 的默认目录。
+// **不要**在此创建 QIcon/QPixmap（仅限 GUI 线程）——图标交 decorate 补。
 QList<ResultItem> FilePlugin::query(const QString &keyword) {
     const QString kw = keyword.trimmed();
     if (kw.isEmpty()) return {};
@@ -37,7 +41,9 @@ QList<ResultItem> FilePlugin::query(const QString &keyword) {
     QList<ResultItem> results;
     int               visited = 0;
 
-    for (const QString &root : searchRoots()) {
+    const QStringList roots = m_settings ? m_settings->fileSearchPaths() : searchRoots();
+
+    for (const QString &root : roots) {
         QDirIterator it(root, QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot,
                         QDirIterator::Subdirectories);
         while (it.hasNext()) {

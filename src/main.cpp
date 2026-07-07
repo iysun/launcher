@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
 
     auto *appPlugin = new AppPlugin;
     win.addPlugin(appPlugin);               // 全局：应用搜索
-    win.addPlugin(new FilePlugin);          // "@" 前缀：文件搜索
+    win.addPlugin(new FilePlugin(settings)); // "@" 前缀：文件搜索
     win.addPlugin(new WebPlugin(settings)); // "?" 前缀：网页搜索
 
     // "/" 前缀：launcher 自身命令。动作在此装配，命令插件本身不与具体能力耦合。
