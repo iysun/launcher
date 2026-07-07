@@ -4,6 +4,7 @@
 #include "ui/hotkeyedit.h"
 #include <QApplication>
 #include <QCheckBox>
+#include <QDialog>
 #include <QDir>
 #include <QFileDialog>
 #include <QFrame>
@@ -11,6 +12,7 @@
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
 #include <QMouseEvent>
@@ -18,6 +20,7 @@
 #include <QScreen>
 #include <QScrollArea>
 #include <QShowEvent>
+#include <QUuid>
 #include <QVBoxLayout>
 
 // ── 颜色常量（Catppuccin Mocha） ──────────────────────────────
@@ -33,7 +36,8 @@ SettingsDialog::SettingsDialog(AppSettings *settings, const QList<IPlugin *> &pl
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     setAttribute(Qt::WA_TranslucentBackground);
     setFixedWidth(kWidth);
-    setupUi(plugins);
+    setupUi(plugins);       // 只建结构：控件/按钮/信号连接，不填当前值
+    syncFormFromSettings(); // 首次按当前设置填值
 
     // 分区会随功能增长变多变高；给整个对话框设高度上限（留出边距），超出时内容区
     // 自动滚动（见 setupUi 里的 QScrollArea），保证标题栏和底部保存/取消按钮
@@ -50,6 +54,22 @@ QLabel *SettingsDialog::makeSectionLabel(const QString &text) {
                                "padding: 0; margin: 0;")
                            .arg(kOverlay0));
     return lbl;
+}
+
+// 供 setupUi() 里的 HotkeyEdit 和 promptForWebEngine() 里的 QLineEdit 共用
+static QString lineEditStyle() {
+    return QString(R"(
+        QLineEdit {
+            background: %1;
+            color: %2;
+            border: 1px solid %3;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 13px;
+        }
+        QLineEdit:focus { border-color: %4; }
+    )")
+        .arg(kSurface0, kText, kBorder, kBlue);
 }
 
 void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
@@ -120,19 +140,6 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     contentLayout->setContentsMargins(20, 16, 20, 16);
     contentLayout->setSpacing(12);
 
-    const QString inputStyle = QString(R"(
-        QLineEdit {
-            background: %1;
-            color: %2;
-            border: 1px solid %3;
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 13px;
-        }
-        QLineEdit:focus { border-color: %4; }
-    )")
-                                   .arg(kSurface0, kText, kBorder, kBlue);
-
     const QString checkStyle = QString(R"(
         QCheckBox {
             color: %1;
@@ -148,10 +155,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         QCheckBox::indicator:checked {
             background: %4;
             border-color: %4;
-            image: none;
-        }
-        QCheckBox::indicator:checked:after {
-            content: "✓";
+            image: url(:/icons/check.png);
         }
     )")
                                    .arg(kText, kBorder, kSurface0, kBlue);
@@ -159,8 +163,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     // 热键
     contentLayout->addWidget(makeSectionLabel("热键"));
     m_hotkeyEdit = new HotkeyEdit(content);
-    m_hotkeyEdit->setKeySequence(QKeySequence(m_settings->hotkey()));
-    m_hotkeyEdit->setStyleSheet(inputStyle);
+    m_hotkeyEdit->setStyleSheet(lineEditStyle());
     contentLayout->addWidget(m_hotkeyEdit);
 
     // 开机自启动
@@ -172,7 +175,6 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     contentLayout->addWidget(sep1);
 
     m_autostartCheck = new QCheckBox("开机自启动", content);
-    m_autostartCheck->setChecked(m_settings->autostart());
     m_autostartCheck->setStyleSheet(checkStyle);
     contentLayout->addWidget(m_autostartCheck);
 
@@ -187,11 +189,9 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
 
         contentLayout->addWidget(makeSectionLabel("插件"));
 
-        const QStringList disabled = m_settings->disabledPlugins();
         for (IPlugin *p : plugins) {
             const QString name = p->name();
             auto         *cb   = new QCheckBox(name, content);
-            cb->setChecked(!disabled.contains(name));
             cb->setStyleSheet(checkStyle);
             contentLayout->addWidget(cb);
             m_pluginChecks.append(cb);
@@ -229,55 +229,37 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         )")
                                         .arg(kSurface0, kText, kBorder, kBlue));
 
-        // 按已保存顺序填充引擎名称，UserRole 存 id
-        const QStringList      savedOrder = m_settings->webEngineOrder();
-        const QList<WebEngine> allEngines = WebPlugin::allEngines();
-        // 先按 savedOrder 排，再追加 savedOrder 里没有的（兼容日后新增引擎）
-        QList<WebEngine> ordered;
-        for (const QString &id : savedOrder)
-            for (const WebEngine &e : allEngines)
-                if (e.id == id) {
-                    ordered.append(e);
-                    break;
-                }
-        for (const WebEngine &e : allEngines) {
-            bool found = false;
-            for (const WebEngine &o : ordered)
-                if (o.id == e.id) {
-                    found = true;
-                    break;
-                }
-            if (!found) ordered.append(e);
-        }
-        for (const WebEngine &e : ordered) {
-            auto *it = new QListWidgetItem(e.name, m_engineList);
-            it->setData(Qt::UserRole, e.id);
-        }
-        if (m_engineList->count()) m_engineList->setCurrentRow(0);
         rowLayout->addWidget(m_engineList, 1);
 
-        const QString arrowBtn = QString(R"(
+        // ↑ ↓ 排序，添加/移除自定义引擎；四个按钮统一样式，避免列宽参差
+        const QString engineBtnStyle = QString(R"(
             QPushButton {
-                background: %1; color: %2; font-size: 16px;
+                background: %1; color: %2; font-size: 13px;
                 border: 1px solid %3; border-radius: 6px;
-                min-width: 32px; min-height: 32px;
+                min-width: 44px; min-height: 32px;
             }
-            QPushButton:hover { background: #45475a; }
+            QPushButton:hover:!disabled { background: #45475a; }
             QPushButton:disabled { color: %3; }
         )")
-                                     .arg(kSurface0, kText, kBorder);
+                                          .arg(kSurface0, kText, kBorder);
 
         auto *btnCol    = new QWidget(row);
         auto *btnLayout = new QVBoxLayout(btnCol);
         btnLayout->setContentsMargins(0, 0, 0, 0);
         btnLayout->setSpacing(6);
 
-        auto *upBtn   = new QPushButton("↑", btnCol);
-        auto *downBtn = new QPushButton("↓", btnCol);
-        upBtn->setStyleSheet(arrowBtn);
-        downBtn->setStyleSheet(arrowBtn);
+        auto *upBtn           = new QPushButton("↑", btnCol);
+        auto *downBtn         = new QPushButton("↓", btnCol);
+        auto *addEngineBtn    = new QPushButton("添加", btnCol);
+        auto *removeEngineBtn = new QPushButton("移除", btnCol);
+        upBtn->setStyleSheet(engineBtnStyle);
+        downBtn->setStyleSheet(engineBtnStyle);
+        addEngineBtn->setStyleSheet(engineBtnStyle);
+        removeEngineBtn->setStyleSheet(engineBtnStyle);
         btnLayout->addWidget(upBtn);
         btnLayout->addWidget(downBtn);
+        btnLayout->addWidget(addEngineBtn);
+        btnLayout->addWidget(removeEngineBtn);
         btnLayout->addStretch();
         rowLayout->addWidget(btnCol);
 
@@ -295,6 +277,31 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
             m_engineList->insertItem(row + 1, item);
             m_engineList->setCurrentRow(row + 1);
         });
+        connect(addEngineBtn, &QPushButton::clicked, this, [this] {
+            if (const std::optional<WebEngine> e = promptForWebEngine()) {
+                auto *it = new QListWidgetItem(e->name, m_engineList);
+                it->setData(Qt::UserRole, e->id);
+                it->setData(Qt::UserRole + 1, e->urlTemplate);
+                m_engineList->setCurrentItem(it);
+            }
+        });
+        connect(removeEngineBtn, &QPushButton::clicked, this, [this] {
+            const int row = m_engineList->currentRow();
+            if (row < 0) return;
+            const QString id = m_engineList->item(row)->data(Qt::UserRole).toString();
+            if (!id.startsWith("custom:")) return; // 内置引擎不可删除
+            delete m_engineList->takeItem(row);
+        });
+        // "移除"只对自定义引擎生效，选中内置引擎时禁用，避免点了没反应却不知道why
+        auto updateRemoveEngineEnabled = [this, removeEngineBtn] {
+            const int  row = m_engineList->currentRow();
+            const bool removable =
+                row >= 0 &&
+                m_engineList->item(row)->data(Qt::UserRole).toString().startsWith("custom:");
+            removeEngineBtn->setEnabled(removable);
+        };
+        connect(m_engineList, &QListWidget::currentRowChanged, this, updateRemoveEngineEnabled);
+        updateRemoveEngineEnabled();
 
         contentLayout->addWidget(row);
     }
@@ -329,8 +336,6 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         )")
                                        .arg(kSurface0, kText, kBorder, kBlue));
 
-        for (const QString &dir : m_settings->fileSearchPaths())
-            new QListWidgetItem(dir, m_pathList);
         rowLayout->addWidget(m_pathList, 1);
 
         const QString dirBtnStyle = QString(R"(
@@ -402,7 +407,6 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     auto *footerLayout = new QHBoxLayout(footer);
     footerLayout->setContentsMargins(20, 12, 20, 12);
     footerLayout->setSpacing(8);
-    footerLayout->addStretch();
 
     const QString btnBase = QString(R"(
         QPushButton {
@@ -412,6 +416,16 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
             border: none;
         }
     )");
+
+    auto *resetBtn = new QPushButton("重置", footer);
+    resetBtn->setStyleSheet(btnBase + QString(R"(
+        QPushButton { background: transparent; color: %1; border: 1px solid %2; }
+        QPushButton:hover { background: %3; }
+    )")
+                                          .arg(kOverlay0, kBorder, kSurface0));
+    footerLayout->addWidget(resetBtn);
+
+    footerLayout->addStretch();
 
     auto *cancelBtn = new QPushButton("取消", footer);
     cancelBtn->setStyleSheet(btnBase + QString(R"(
@@ -431,8 +445,154 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
 
     outer->addWidget(footer);
 
+    connect(resetBtn, &QPushButton::clicked, this, &SettingsDialog::resetToDefaults);
     connect(cancelBtn, &QPushButton::clicked, this, &SettingsDialog::hide);
     connect(saveBtn, &QPushButton::clicked, this, &SettingsDialog::save);
+}
+
+// ── 填值 / 重置 ───────────────────────────────────────────────
+
+// 把表单所有字段从 m_settings 灌回控件；构造时（首次）和 showEvent（每次重新显示前）都会调用，
+// 确保「取消」在任何时候都是真正无副作用的操作，不会把上一次未保存的编辑残留到下次打开
+void SettingsDialog::syncFormFromSettings() {
+    m_hotkeyEdit->setKeySequence(QKeySequence(m_settings->hotkey()));
+    m_autostartCheck->setChecked(m_settings->autostart());
+
+    const QStringList disabled = m_settings->disabledPlugins();
+    for (int i = 0; i < m_pluginChecks.size(); ++i)
+        m_pluginChecks[i]->setChecked(!disabled.contains(m_pluginNames[i]));
+
+    if (m_engineList)
+        populateEngineList(m_settings->webEngineOrder(), WebPlugin::allEngines(m_settings));
+    if (m_pathList) populatePathList(m_settings->fileSearchPaths());
+}
+
+// 表单恢复出厂默认；不碰 m_settings/磁盘，用户仍需点"保存"才会落盘
+void SettingsDialog::resetToDefaults() {
+    m_hotkeyEdit->setKeySequence(QKeySequence(AppSettings::defaultHotkey()));
+    m_autostartCheck->setChecked(AppSettings::defaultAutostart());
+
+    for (QCheckBox *cb : m_pluginChecks) cb->setChecked(true); // 默认插件全部启用
+
+    if (m_engineList)
+        populateEngineList(AppSettings::defaultWebEngineOrder(), WebPlugin::allEngines());
+    if (m_pathList) populatePathList(AppSettings::defaultFileSearchPaths());
+}
+
+// 按 order 排、追加 available 里 order 没有的（兼容日后新增内置引擎），
+// 每项 UserRole 存 id、UserRole+1 存 urlTemplate（供 save() 识别/收集自定义引擎）
+void SettingsDialog::populateEngineList(const QStringList      &order,
+                                        const QList<WebEngine> &available) {
+    m_engineList->clear();
+    QList<WebEngine> ordered;
+    for (const QString &id : order)
+        for (const WebEngine &e : available)
+            if (e.id == id) {
+                ordered.append(e);
+                break;
+            }
+    for (const WebEngine &e : available) {
+        bool found = false;
+        for (const WebEngine &o : ordered)
+            if (o.id == e.id) {
+                found = true;
+                break;
+            }
+        if (!found) ordered.append(e);
+    }
+    for (const WebEngine &e : ordered) {
+        auto *it = new QListWidgetItem(e.name, m_engineList);
+        it->setData(Qt::UserRole, e.id);
+        it->setData(Qt::UserRole + 1, e.urlTemplate);
+    }
+    if (m_engineList->count()) m_engineList->setCurrentRow(0);
+}
+
+void SettingsDialog::populatePathList(const QStringList &paths) {
+    m_pathList->clear();
+    for (const QString &p : paths)
+        new QListWidgetItem(p, m_pathList);
+}
+
+// 添加自定义网页搜索引擎的小表单：用普通 QDialog（保留系统标题栏），只做深色配色，
+// 不叠加 Frameless + 半透明——那套组合在模态子对话框上曾经导致窗口完全不可见，
+// 不值得为一个低频小表单冒这个风险
+std::optional<WebEngine> SettingsDialog::promptForWebEngine() {
+    QDialog dlg(this);
+    dlg.setWindowTitle("添加网页搜索引擎");
+    dlg.setStyleSheet(QString("QDialog { background: %1; }").arg(kBg));
+    dlg.setFixedWidth(320);
+
+    auto *cardLayout = new QVBoxLayout(&dlg);
+    cardLayout->setContentsMargins(20, 16, 20, 16);
+    cardLayout->setSpacing(8);
+
+    cardLayout->addWidget(makeSectionLabel("名称"));
+    auto *nameEdit = new QLineEdit(&dlg);
+    nameEdit->setStyleSheet(lineEditStyle());
+    cardLayout->addWidget(nameEdit);
+
+    cardLayout->addWidget(makeSectionLabel("URL 模板（用 %1 占位查询词）"));
+    auto *urlEdit = new QLineEdit(&dlg);
+    urlEdit->setPlaceholderText("https://example.com/search?q=%1");
+    urlEdit->setStyleSheet(lineEditStyle());
+    cardLayout->addWidget(urlEdit);
+
+    auto *errorLbl = new QLabel(&dlg);
+    errorLbl->setStyleSheet("color: #f38ba8; font-size: 12px;");
+    errorLbl->hide();
+    cardLayout->addWidget(errorLbl);
+
+    auto *btnRow = new QHBoxLayout;
+    btnRow->addStretch();
+
+    const QString btnBase = QString(R"(
+        QPushButton {
+            font-size: 13px;
+            border-radius: 6px;
+            padding: 6px 20px;
+            border: none;
+        }
+    )");
+    auto         *cancelBtn = new QPushButton("取消", &dlg);
+    cancelBtn->setStyleSheet(btnBase + QString(R"(
+        QPushButton { background: %1; color: %2; }
+        QPushButton:hover { background: #45475a; }
+    )")
+                                           .arg(kSurface0, kText));
+    auto *okBtn = new QPushButton("确定", &dlg);
+    okBtn->setStyleSheet(btnBase + QString(R"(
+        QPushButton { background: %1; color: #1e1e2e; font-weight: bold; }
+        QPushButton:hover { background: #7aa2f7; }
+    )")
+                                       .arg(kBlue));
+    okBtn->setDefault(true);
+    btnRow->addWidget(cancelBtn);
+    btnRow->addWidget(okBtn);
+    cardLayout->addLayout(btnRow);
+
+    connect(cancelBtn, &QPushButton::clicked, &dlg, &QDialog::reject);
+    connect(okBtn, &QPushButton::clicked, &dlg, [&] {
+        if (nameEdit->text().trimmed().isEmpty()) {
+            errorLbl->setText("请输入名称");
+            errorLbl->show();
+            return;
+        }
+        if (!urlEdit->text().contains("%1")) {
+            errorLbl->setText("URL 模板必须包含 %1 占位符");
+            errorLbl->show();
+            return;
+        }
+        dlg.accept();
+    });
+
+    if (dlg.exec() != QDialog::Accepted) return std::nullopt;
+
+    WebEngine e;
+    e.name        = nameEdit->text().trimmed();
+    e.urlTemplate = urlEdit->text().trimmed();
+    e.id          = "custom:" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    return e;
 }
 
 // ── 保存 ──────────────────────────────────────────────────────
@@ -451,10 +611,19 @@ void SettingsDialog::save() {
     m_settings->setDisabledPlugins(disabled);
 
     if (m_engineList) {
-        QStringList order;
-        for (int i = 0; i < m_engineList->count(); ++i)
-            order.append(m_engineList->item(i)->data(Qt::UserRole).toString());
+        QStringList      order;
+        QList<WebEngine> customEngines;
+        for (int i = 0; i < m_engineList->count(); ++i) {
+            auto         *item = m_engineList->item(i);
+            const QString id   = item->data(Qt::UserRole).toString();
+            order.append(id);
+            if (id.startsWith("custom:")) {
+                customEngines.append(
+                    {id, item->text(), item->data(Qt::UserRole + 1).toString()});
+            }
+        }
         m_settings->setWebEngineOrder(order);
+        m_settings->setCustomWebEngines(customEngines);
     }
 
     if (m_pathList) {
@@ -475,6 +644,7 @@ void SettingsDialog::save() {
 // 纵向默认放在屏幕 1/3 处，但钳制到可用区域内，避免小屏幕上内容被推出屏幕底部。
 void SettingsDialog::showEvent(QShowEvent *e) {
     QWidget::showEvent(e);
+    syncFormFromSettings(); // 每次显示前用真实设置刷新表单，避免"取消"过的编辑残留到下次打开
     QScreen *scr = QGuiApplication::primaryScreen();
     if (scr) {
         const QRect geo    = scr->availableGeometry();

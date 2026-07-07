@@ -1,5 +1,7 @@
 #pragma once
+#include "core/webengine.h"
 #include "plugin/iplugin.h"
+#include <optional>
 #include <QWidget>
 
 class AppSettings;
@@ -23,8 +25,13 @@ protected:
 
 private:
     void    setupUi(const QList<IPlugin *> &plugins);
+    void    syncFormFromSettings(); // 从 m_settings 灌回所有表单控件（首次显示 + 每次重新显示）
+    void    resetToDefaults();      // 表单恢复出厂默认，不碰 m_settings/磁盘
     void    save();
     QLabel *makeSectionLabel(const QString &text);
+    void    populateEngineList(const QStringList &order, const QList<WebEngine> &available);
+    void    populatePathList(const QStringList &paths);
+    std::optional<WebEngine> promptForWebEngine();
 
     AppSettings       *m_settings;
     HotkeyEdit        *m_hotkeyEdit;

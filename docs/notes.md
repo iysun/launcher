@@ -14,3 +14,4 @@
 - [Alt+Space 是 Windows 系统保留键](notes/altspace-reserved-key.md) — 全局热键注册失败（不崩溃仅无效）时回退 Ctrl+Space
 - [查询防抖与异步接缝](notes/query-debounce-async-seam.md) — 为何 runQuery 现在同步执行、线程化推迟到 FilePlugin 落地
 - [FilePlugin 同步遍历的访问上限兜底](notes/fileplugin-bounded-scan.md) — `@` 文件搜索为何用 kMaxVisit 封顶而非线程化
+- [Qt 样式表不支持 ::after / content](notes/qss-checkbox-checkmark.md) — 勾选框选中态对勾必须用 `image: url(...)` 提供真实图标，不能用 CSS 伪元素

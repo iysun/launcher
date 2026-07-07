@@ -12,14 +12,20 @@ static const QList<WebEngine> kAllEngines = {
 
 WebPlugin::WebPlugin(AppSettings *settings) : m_settings(settings) {}
 
-QList<WebEngine> WebPlugin::allEngines() {
-    return kAllEngines;
+QList<WebEngine> WebPlugin::allEngines(AppSettings *settings) {
+    QList<WebEngine> result = kAllEngines;
+    if (settings) result += settings->customWebEngines();
+    return result;
 }
 
-static const WebEngine *findEngine(const QString &id) {
+std::optional<WebEngine> WebPlugin::findEngine(const QString &id) const {
     for (const WebEngine &e : kAllEngines)
-        if (e.id == id) return &e;
-    return nullptr;
+        if (e.id == id) return e;
+    if (m_settings) {
+        for (const WebEngine &e : m_settings->customWebEngines())
+            if (e.id == id) return e;
+    }
+    return std::nullopt;
 }
 
 QList<ResultItem> WebPlugin::query(const QString &keyword) {
@@ -37,7 +43,7 @@ QList<ResultItem> WebPlugin::query(const QString &keyword) {
     QList<ResultItem> results;
     int               score = static_cast<int>(order.size()) * 100;
     for (const QString &id : order) {
-        const WebEngine *e = findEngine(id);
+        const std::optional<WebEngine> e = findEngine(id);
         if (!e) continue;
         ResultItem item;
         item.title    = QString("在 %1 中搜索").arg(e->name);
@@ -51,8 +57,8 @@ QList<ResultItem> WebPlugin::query(const QString &keyword) {
 }
 
 void WebPlugin::execute(const ResultItem &item) {
-    const QString    id      = item.action.mid(4); // 去掉 "web:" 前缀
-    const QString    encoded = QString::fromUtf8(QUrl::toPercentEncoding(item.subtitle));
-    const WebEngine *e       = findEngine(id);
+    const QString                  id      = item.action.mid(4); // 去掉 "web:" 前缀
+    const QString                  encoded = QString::fromUtf8(QUrl::toPercentEncoding(item.subtitle));
+    const std::optional<WebEngine> e       = findEngine(id);
     if (e) QDesktopServices::openUrl(QUrl(e->urlTemplate.arg(encoded)));
 }

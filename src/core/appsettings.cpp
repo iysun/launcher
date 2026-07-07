@@ -57,6 +57,10 @@ void AppSettings::setWebEngineOrder(const QStringList &order) {
     m_webEngineOrder = order;
 }
 
+void AppSettings::setCustomWebEngines(const QList<WebEngine> &engines) {
+    m_customWebEngines = engines;
+}
+
 void AppSettings::setFileSearchPaths(const QStringList &paths) {
     QMutexLocker lock(&m_fileSearchPathsMutex);
     m_fileSearchPaths = paths;
@@ -76,6 +80,16 @@ void AppSettings::save() const {
     for (const QString &id : m_webEngineOrder)
         orderArr.append(id);
     obj["webEngineOrder"] = orderArr;
+
+    QJsonArray customArr;
+    for (const WebEngine &e : m_customWebEngines) {
+        QJsonObject o;
+        o["id"]          = e.id;
+        o["name"]        = e.name;
+        o["urlTemplate"] = e.urlTemplate;
+        customArr.append(o);
+    }
+    obj["customWebEngines"] = customArr;
 
     QJsonArray pathsArr;
     for (const QString &p : fileSearchPaths()) // 走加锁 getter，保持访问该字段一律过锁
@@ -108,6 +122,14 @@ void AppSettings::load() {
         m_webEngineOrder.clear();
         for (const QJsonValue &v : obj["webEngineOrder"].toArray())
             m_webEngineOrder.append(v.toString());
+    }
+    if (obj.contains("customWebEngines")) {
+        m_customWebEngines.clear();
+        for (const QJsonValue &v : obj["customWebEngines"].toArray()) {
+            const QJsonObject o = v.toObject();
+            m_customWebEngines.append(
+                {o["id"].toString(), o["name"].toString(), o["urlTemplate"].toString()});
+        }
     }
     if (obj.contains("fileSearchPaths")) {
         QStringList paths;
