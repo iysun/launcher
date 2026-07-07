@@ -1,0 +1,57 @@
+{
+    "meta": { "code": "zh", "name": "简体中文" },
+    "strings": {
+        "tray.showHide": "显示 / 隐藏",
+        "tray.quit": "退出",
+        "search.placeholder": "输入关键词搜索, /help 获取帮助",
+
+        "settings.title": "设置",
+        "settings.hotkey": "热键",
+        "settings.autostart": "开机自启动",
+        "settings.plugins": "插件",
+        "settings.webEngines": "网页搜索引擎优先级",
+        "settings.add": "添加",
+        "settings.remove": "移除",
+        "settings.fileSearchDirs": "文件搜索目录",
+        "settings.chooseDir": "选择目录",
+        "settings.reset": "重置",
+        "settings.cancel": "取消",
+        "settings.save": "保存",
+        "settings.addEngineTitle": "添加网页搜索引擎",
+        "settings.name": "名称",
+        "settings.urlTemplate": "URL 模板（用 %1 占位查询词）",
+        "settings.ok": "确定",
+        "settings.nameRequired": "请输入名称",
+        "settings.urlTemplateRequired": "URL 模板必须包含 %1 占位符",
+        "settings.language": "语言",
+        "settings.restartTitle": "需要重启",
+        "settings.restartBody": "语言设置已更改，需重启 launcher 后生效。是否现在重启？",
+
+        "help.title": "帮助",
+        "help.shortcuts": "快捷键",
+        "help.toggle": "唤起 / 隐藏",
+        "help.execute": "执行选中项",
+        "help.altAction": "次级动作（复制路径等）",
+        "help.close": "关闭",
+        "help.moveSelection": "移动选中项",
+        "help.prefixesLabel": "搜索前缀",
+        "help.noPrefix": "（无前缀）",
+        "help.appSearch": "搜索已安装应用",
+        "help.commandDesc": "命令（裸 / 列出全部）",
+        "help.fileSearch": "文件搜索",
+        "help.webSearch": "网页搜索（Google / Bing / Baidu / GitHub）",
+        "help.commandsLabel": "命令",
+
+        "hotkey.pressKeys": "(按下快捷键...)",
+        "hotkey.clickToRecord": "点击后按下快捷键",
+
+        "web.searchIn": "在 %1 中搜索",
+
+        "cmd.help": "显示帮助",
+        "cmd.quit": "退出 launcher",
+        "cmd.reload": "重新加载应用列表",
+        "cmd.datadir": "打开配置 / 数据目录",
+        "cmd.restart": "重启 launcher",
+        "cmd.settings": "打开设置"
+    }
+}

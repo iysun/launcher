@@ -44,6 +44,10 @@ void AppSettings::setHotkey(const QString &seq) {
     emit hotkeyChanged(seq);
 }
 
+void AppSettings::setLanguage(const QString &code) {
+    m_language = code;
+}
+
 void AppSettings::setAutostart(bool on) {
     m_autostart = on;
     applyAutostart(on);
@@ -69,6 +73,7 @@ void AppSettings::setFileSearchPaths(const QStringList &paths) {
 void AppSettings::save() const {
     QJsonObject obj;
     obj["hotkey"]    = m_hotkey;
+    obj["language"]  = m_language;
     obj["autostart"] = m_autostart;
 
     QJsonArray arr;
@@ -112,6 +117,7 @@ void AppSettings::load() {
 
     const QJsonObject obj = QJsonDocument::fromJson(f.readAll()).object();
     if (obj.contains("hotkey")) m_hotkey = obj["hotkey"].toString(m_hotkey);
+    if (obj.contains("language")) m_language = obj["language"].toString(m_language);
     if (obj.contains("autostart")) m_autostart = obj["autostart"].toBool(m_autostart);
     if (obj.contains("disabledPlugins")) {
         m_disabledPlugins.clear();

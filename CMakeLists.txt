@@ -21,6 +21,7 @@ qt_add_executable(launcher WIN32
     src/core/pinyin_data.cpp
     src/core/usagestore.cpp
     src/core/appsettings.cpp
+    src/core/i18n.cpp
     src/plugins/appplugin.cpp
     src/plugins/commandplugin.cpp
     src/plugins/fileplugin.cpp

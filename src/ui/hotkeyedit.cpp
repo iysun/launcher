@@ -1,4 +1,5 @@
 #include "hotkeyedit.h"
+#include "core/i18n.h"
 #include <QFocusEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -102,7 +103,7 @@ void HotkeyEdit::startRecording() {
     m_recording = true;
     s_instance  = this;
     m_hook      = SetWindowsHookEx(WH_KEYBOARD_LL, hookProc, GetModuleHandle(nullptr), 0);
-    setText("(按下快捷键...)");
+    setText(I18n::t("hotkey.pressKeys"));
     setReadOnly(true);
 }
 
@@ -123,7 +124,7 @@ void HotkeyEdit::stopRecording() {
 
 void HotkeyEdit::startRecording() {
     m_recording = true;
-    setText("(按下快捷键...)");
+    setText(I18n::t("hotkey.pressKeys"));
 }
 
 void HotkeyEdit::stopRecording() {
@@ -148,7 +149,7 @@ void HotkeyEdit::keyPressEvent(QKeyEvent *e) {
 // ── 公共实现 ───────────────────────────────────────────────────
 
 HotkeyEdit::HotkeyEdit(QWidget *parent) : QLineEdit(parent) {
-    setPlaceholderText("点击后按下快捷键");
+    setPlaceholderText(I18n::t("hotkey.clickToRecord"));
     setReadOnly(false);
     updateDisplay();
 }

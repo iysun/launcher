@@ -1,0 +1,57 @@
+{
+    "meta": { "code": "en", "name": "English" },
+    "strings": {
+        "tray.showHide": "Show / Hide",
+        "tray.quit": "Quit",
+        "search.placeholder": "Type to search, /help for help",
+
+        "settings.title": "Settings",
+        "settings.hotkey": "Hotkey",
+        "settings.autostart": "Start with system",
+        "settings.plugins": "Plugins",
+        "settings.webEngines": "Web search engine priority",
+        "settings.add": "Add",
+        "settings.remove": "Remove",
+        "settings.fileSearchDirs": "File search directories",
+        "settings.chooseDir": "Choose Directory",
+        "settings.reset": "Reset",
+        "settings.cancel": "Cancel",
+        "settings.save": "Save",
+        "settings.addEngineTitle": "Add Web Search Engine",
+        "settings.name": "Name",
+        "settings.urlTemplate": "URL template (use %1 as query placeholder)",
+        "settings.ok": "OK",
+        "settings.nameRequired": "Please enter a name",
+        "settings.urlTemplateRequired": "URL template must contain the %1 placeholder",
+        "settings.language": "Language",
+        "settings.restartTitle": "Restart Required",
+        "settings.restartBody": "The language setting has changed and requires a restart of launcher to take effect. Restart now?",
+
+        "help.title": "Help",
+        "help.shortcuts": "Shortcuts",
+        "help.toggle": "Show / Hide",
+        "help.execute": "Run selected item",
+        "help.altAction": "Secondary action (copy path, etc.)",
+        "help.close": "Close",
+        "help.moveSelection": "Move selection",
+        "help.prefixesLabel": "Search Prefixes",
+        "help.noPrefix": "(no prefix)",
+        "help.appSearch": "Search installed apps",
+        "help.commandDesc": "Commands (bare / list all)",
+        "help.fileSearch": "File search",
+        "help.webSearch": "Web search (Google / Bing / Baidu / GitHub)",
+        "help.commandsLabel": "Commands",
+
+        "hotkey.pressKeys": "(Press a key combo...)",
+        "hotkey.clickToRecord": "Click then press a key combo",
+
+        "web.searchIn": "Search %1",
+
+        "cmd.help": "Show help",
+        "cmd.quit": "Quit launcher",
+        "cmd.reload": "Reload app list",
+        "cmd.datadir": "Open config / data directory",
+        "cmd.restart": "Restart launcher",
+        "cmd.settings": "Open settings"
+    }
+}

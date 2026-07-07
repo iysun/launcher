@@ -1,5 +1,6 @@
 #include "webplugin.h"
 #include "core/appsettings.h"
+#include "core/i18n.h"
 #include <QDesktopServices>
 #include <QUrl>
 
@@ -46,7 +47,7 @@ QList<ResultItem> WebPlugin::query(const QString &keyword) {
         const std::optional<WebEngine> e = findEngine(id);
         if (!e) continue;
         ResultItem item;
-        item.title    = QString("在 %1 中搜索").arg(e->name);
+        item.title    = I18n::t("web.searchIn").arg(e->name);
         item.subtitle = kw;
         item.action   = "web:" + id;
         item.score    = score;

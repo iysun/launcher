@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "core/appsettings.h"
+#include "core/i18n.h"
 #include "core/usagestore.h"
 #include "ui/resultdelegate.h"
 #include <algorithm>
@@ -55,9 +56,9 @@ MainWindow::MainWindow(AppSettings *settings, QWidget *parent)
     m_tray->setToolTip("Launcher");
 
     auto *trayMenu = new QMenu();
-    trayMenu->addAction("显示 / 隐藏", this, &MainWindow::toggle);
+    trayMenu->addAction(I18n::t("tray.showHide"), this, &MainWindow::toggle);
     trayMenu->addSeparator();
-    trayMenu->addAction("退出", qApp, &QApplication::quit);
+    trayMenu->addAction(I18n::t("tray.quit"), qApp, &QApplication::quit);
     m_tray->setContextMenu(trayMenu);
 
     connect(m_tray, &QSystemTrayIcon::activated, this,
@@ -102,7 +103,7 @@ void MainWindow::setupUi() {
     cardLayout->setSpacing(0);
 
     m_search = new QLineEdit(card);
-    m_search->setPlaceholderText("输入关键词搜索, /help 获取帮助");
+    m_search->setPlaceholderText(I18n::t("search.placeholder"));
     m_search->setFixedHeight(kSearchH);
     m_search->setStyleSheet(R"(
         QLineEdit {

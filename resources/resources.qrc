@@ -3,4 +3,8 @@
     <file alias="tray.png">icons/tray.png</file>
     <file alias="check.png">icons/check.png</file>
   </qresource>
+  <qresource prefix="/i18n">
+    <file alias="zh.json">i18n/zh.json</file>
+    <file alias="en.json">i18n/en.json</file>
+  </qresource>
 </RCC>

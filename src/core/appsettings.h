@@ -12,6 +12,7 @@ public:
     explicit AppSettings(QObject *parent = nullptr);
 
     QString           hotkey() const { return m_hotkey; }
+    QString           language() const { return m_language; }
     bool              autostart() const { return m_autostart; }
     QStringList       disabledPlugins() const { return m_disabledPlugins; }
     QStringList       webEngineOrder() const { return m_webEngineOrder; }
@@ -20,6 +21,7 @@ public:
     QStringList fileSearchPaths() const;
 
     void setHotkey(const QString &seq);
+    void setLanguage(const QString &code);
     void setAutostart(bool on);
     void setDisabledPlugins(const QStringList &names);
     void setWebEngineOrder(const QStringList &order);
@@ -30,6 +32,7 @@ public:
 
     // 出厂默认值：供设置页"重置"使用
     static QString      defaultHotkey() { return "Alt+Space"; }
+    static QString      defaultLanguage() { return "zh"; }
     static bool         defaultAutostart() { return false; }
     static QStringList  defaultWebEngineOrder() { return {"google", "bing", "baidu", "github"}; }
     static QStringList  defaultFileSearchPaths();
@@ -42,6 +45,7 @@ private:
     void applyAutostart(bool on) const;
 
     QString          m_hotkey    = "Alt+Space";
+    QString          m_language  = "zh";
     bool             m_autostart = false;
     QStringList      m_disabledPlugins;
     QStringList      m_webEngineOrder = {"google", "bing", "baidu", "github"};

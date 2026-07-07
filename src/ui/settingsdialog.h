@@ -7,6 +7,7 @@
 class AppSettings;
 class HotkeyEdit;
 class QCheckBox;
+class QComboBox;
 class QLabel;
 class QListWidget;
 class QPoint;
@@ -35,6 +36,7 @@ private:
 
     AppSettings       *m_settings;
     HotkeyEdit        *m_hotkeyEdit;
+    QComboBox         *m_languageCombo = nullptr;
     QCheckBox         *m_autostartCheck;
     QList<QCheckBox *> m_pluginChecks;
     QList<QString>     m_pluginNames;

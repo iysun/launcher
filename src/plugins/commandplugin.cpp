@@ -1,10 +1,11 @@
 #include "commandplugin.h"
+#include "core/i18n.h"
 #include "core/matcher.h"
 #include "ui/helpdialog.h"
 
 CommandPlugin::CommandPlugin() {
     // help 内置自注册：showHelp 在执行时读 m_cmds，故能列出 main.cpp 后续装配的全部命令
-    addCommand("help", "显示帮助", [this] { showHelp(); });
+    addCommand("help", I18n::t("cmd.help"), [this] { showHelp(); });
 }
 
 void CommandPlugin::addCommand(const QString &id, const QString &desc, Action run,

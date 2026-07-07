@@ -1,4 +1,5 @@
 #include "helpdialog.h"
+#include "core/i18n.h"
 #include <QFrame>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -97,7 +98,7 @@ void HelpDialog::buildLayout() {
     auto *tl = new QHBoxLayout(titleBar);
     tl->setContentsMargins(16, 0, 12, 0);
 
-    auto *titleLbl = new QLabel("帮助", titleBar);
+    auto *titleLbl = new QLabel(I18n::t("help.title"), titleBar);
     titleLbl->setStyleSheet(
         QString("color: %1; font-size: 15px; font-weight: bold;").arg(kText));
     tl->addWidget(titleLbl);
@@ -122,26 +123,26 @@ void HelpDialog::buildLayout() {
     cl->setSpacing(6);
 
     // 快捷键
-    cl->addWidget(sectionLabel("快捷键"));
-    cl->addWidget(row("Alt+Space", "唤起 / 隐藏", content));
-    cl->addWidget(row("Enter", "执行选中项", content));
-    cl->addWidget(row("Ctrl+Enter", "次级动作（复制路径等）", content));
-    cl->addWidget(row("Esc / Ctrl+G", "关闭", content));
-    cl->addWidget(row("↑ ↓ / Ctrl+P/N", "移动选中项", content));
+    cl->addWidget(sectionLabel(I18n::t("help.shortcuts")));
+    cl->addWidget(row("Alt+Space", I18n::t("help.toggle"), content));
+    cl->addWidget(row("Enter", I18n::t("help.execute"), content));
+    cl->addWidget(row("Ctrl+Enter", I18n::t("help.altAction"), content));
+    cl->addWidget(row("Esc / Ctrl+G", I18n::t("help.close"), content));
+    cl->addWidget(row("↑ ↓ / Ctrl+P/N", I18n::t("help.moveSelection"), content));
 
     cl->addWidget(separator(content));
 
     // 前缀
-    cl->addWidget(sectionLabel("搜索前缀"));
-    cl->addWidget(row("（无前缀）", "搜索已安装应用", content));
-    cl->addWidget(row("/", "命令（裸 / 列出全部）", content));
-    cl->addWidget(row("@", "文件搜索", content));
-    cl->addWidget(row("?", "网页搜索（Google / Bing / Baidu / GitHub）", content));
+    cl->addWidget(sectionLabel(I18n::t("help.prefixesLabel")));
+    cl->addWidget(row(I18n::t("help.noPrefix"), I18n::t("help.appSearch"), content));
+    cl->addWidget(row("/", I18n::t("help.commandDesc"), content));
+    cl->addWidget(row("@", I18n::t("help.fileSearch"), content));
+    cl->addWidget(row("?", I18n::t("help.webSearch"), content));
 
     cl->addWidget(separator(content));
 
     // 命令列表（动态，由 setCommands 填入）
-    cl->addWidget(sectionLabel("命令"));
+    cl->addWidget(sectionLabel(I18n::t("help.commandsLabel")));
     auto *cmdContainer = new QWidget(content);
     m_cmdLayout        = new QVBoxLayout(cmdContainer);
     m_cmdLayout->setContentsMargins(0, 0, 0, 0);
@@ -157,7 +158,7 @@ void HelpDialog::buildLayout() {
     fl->setContentsMargins(20, 10, 20, 10);
     fl->addStretch();
 
-    auto *closeBtn2 = new QPushButton("关闭", footer);
+    auto *closeBtn2 = new QPushButton(I18n::t("help.close"), footer);
     closeBtn2->setFixedWidth(80);
     closeBtn2->setStyleSheet(QString(R"(
         QPushButton { background: %1; color: %2; font-size: 13px; border: none; border-radius: 6px; padding: 6px 0; }

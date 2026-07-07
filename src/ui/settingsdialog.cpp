@@ -1,9 +1,11 @@
 #include "settingsdialog.h"
 #include "core/appsettings.h"
+#include "core/i18n.h"
 #include "plugins/webplugin.h"
 #include "ui/hotkeyedit.h"
 #include <QApplication>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDialog>
 #include <QDir>
 #include <QFileDialog>
@@ -16,6 +18,7 @@
 #include <QListWidget>
 #include <QMessageBox>
 #include <QMouseEvent>
+#include <QProcess>
 #include <QPushButton>
 #include <QScreen>
 #include <QScrollArea>
@@ -103,7 +106,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     titleLayout->setContentsMargins(16, 0, 12, 0);
     titleLayout->setSpacing(0);
 
-    auto *titleLbl = new QLabel("设置", titleBar);
+    auto *titleLbl = new QLabel(I18n::t("settings.title"), titleBar);
     titleLbl->setStyleSheet(
         QString("color: %1; font-size: 15px; font-weight: bold;").arg(kText));
     titleLayout->addWidget(titleLbl);
@@ -161,10 +164,32 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
                                    .arg(kText, kBorder, kSurface0, kBlue);
 
     // 热键
-    contentLayout->addWidget(makeSectionLabel("热键"));
+    contentLayout->addWidget(makeSectionLabel(I18n::t("settings.hotkey")));
     m_hotkeyEdit = new HotkeyEdit(content);
     m_hotkeyEdit->setStyleSheet(lineEditStyle());
     contentLayout->addWidget(m_hotkeyEdit);
+
+    // 语言
+    auto *sepLang = new QFrame(content);
+    sepLang->setFrameShape(QFrame::HLine);
+    sepLang->setStyleSheet(
+        QString("background: %1; border: none; max-height: 1px; margin: 4px 0;")
+            .arg(kBorder));
+    contentLayout->addWidget(sepLang);
+
+    contentLayout->addWidget(makeSectionLabel(I18n::t("settings.language")));
+    m_languageCombo = new QComboBox(content);
+    m_languageCombo->setStyleSheet(QString(R"(
+        QComboBox {
+            background: %1; color: %2;
+            border: 1px solid %3; border-radius: 6px;
+            padding: 4px 8px; font-size: 13px;
+        }
+    )")
+                                       .arg(kSurface0, kText, kBorder));
+    for (const auto &lang : I18n::instance().availableLanguages())
+        m_languageCombo->addItem(lang.second, lang.first);
+    contentLayout->addWidget(m_languageCombo);
 
     // 开机自启动
     auto *sep1 = new QFrame(content);
@@ -174,7 +199,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
             .arg(kBorder));
     contentLayout->addWidget(sep1);
 
-    m_autostartCheck = new QCheckBox("开机自启动", content);
+    m_autostartCheck = new QCheckBox(I18n::t("settings.autostart"), content);
     m_autostartCheck->setStyleSheet(checkStyle);
     contentLayout->addWidget(m_autostartCheck);
 
@@ -187,7 +212,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
                 .arg(kBorder));
         contentLayout->addWidget(sep2);
 
-        contentLayout->addWidget(makeSectionLabel("插件"));
+        contentLayout->addWidget(makeSectionLabel(I18n::t("settings.plugins")));
 
         for (IPlugin *p : plugins) {
             const QString name = p->name();
@@ -208,7 +233,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
                 .arg(kBorder));
         contentLayout->addWidget(sep);
 
-        contentLayout->addWidget(makeSectionLabel("网页搜索引擎优先级"));
+        contentLayout->addWidget(makeSectionLabel(I18n::t("settings.webEngines")));
 
         auto *row       = new QWidget(content);
         auto *rowLayout = new QHBoxLayout(row);
@@ -250,8 +275,8 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
 
         auto *upBtn           = new QPushButton("↑", btnCol);
         auto *downBtn         = new QPushButton("↓", btnCol);
-        auto *addEngineBtn    = new QPushButton("添加", btnCol);
-        auto *removeEngineBtn = new QPushButton("移除", btnCol);
+        auto *addEngineBtn    = new QPushButton(I18n::t("settings.add"), btnCol);
+        auto *removeEngineBtn = new QPushButton(I18n::t("settings.remove"), btnCol);
         upBtn->setStyleSheet(engineBtnStyle);
         downBtn->setStyleSheet(engineBtnStyle);
         addEngineBtn->setStyleSheet(engineBtnStyle);
@@ -315,7 +340,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
                 .arg(kBorder));
         contentLayout->addWidget(sep);
 
-        contentLayout->addWidget(makeSectionLabel("文件搜索目录"));
+        contentLayout->addWidget(makeSectionLabel(I18n::t("settings.fileSearchDirs")));
 
         auto *row       = new QWidget(content);
         auto *rowLayout = new QHBoxLayout(row);
@@ -353,8 +378,8 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         btnLayout->setContentsMargins(0, 0, 0, 0);
         btnLayout->setSpacing(6);
 
-        auto *addDirBtn    = new QPushButton("添加", btnCol);
-        auto *removeDirBtn = new QPushButton("移除", btnCol);
+        auto *addDirBtn    = new QPushButton(I18n::t("settings.add"), btnCol);
+        auto *removeDirBtn = new QPushButton(I18n::t("settings.remove"), btnCol);
         addDirBtn->setStyleSheet(dirBtnStyle);
         removeDirBtn->setStyleSheet(dirBtnStyle);
         btnLayout->addWidget(addDirBtn);
@@ -363,7 +388,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         rowLayout->addWidget(btnCol);
 
         connect(addDirBtn, &QPushButton::clicked, this, [this] {
-            const QString dir = QFileDialog::getExistingDirectory(this, "选择目录",
+            const QString dir = QFileDialog::getExistingDirectory(this, I18n::t("settings.chooseDir"),
                                                                    QDir::homePath());
             if (dir.isEmpty()) return;
             const QString cleaned = QDir::cleanPath(dir);
@@ -417,7 +442,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         }
     )");
 
-    auto *resetBtn = new QPushButton("重置", footer);
+    auto *resetBtn = new QPushButton(I18n::t("settings.reset"), footer);
     resetBtn->setStyleSheet(btnBase + QString(R"(
         QPushButton { background: transparent; color: %1; border: 1px solid %2; }
         QPushButton:hover { background: %3; }
@@ -427,7 +452,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
 
     footerLayout->addStretch();
 
-    auto *cancelBtn = new QPushButton("取消", footer);
+    auto *cancelBtn = new QPushButton(I18n::t("settings.cancel"), footer);
     cancelBtn->setStyleSheet(btnBase + QString(R"(
         QPushButton { background: %1; color: %2; }
         QPushButton:hover { background: #45475a; }
@@ -435,7 +460,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
                                            .arg(kSurface0, kText));
     footerLayout->addWidget(cancelBtn);
 
-    auto *saveBtn = new QPushButton("保存", footer);
+    auto *saveBtn = new QPushButton(I18n::t("settings.save"), footer);
     saveBtn->setStyleSheet(btnBase + QString(R"(
         QPushButton { background: %1; color: #1e1e2e; font-weight: bold; }
         QPushButton:hover { background: #7aa2f7; }
@@ -456,6 +481,10 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
 // 确保「取消」在任何时候都是真正无副作用的操作，不会把上一次未保存的编辑残留到下次打开
 void SettingsDialog::syncFormFromSettings() {
     m_hotkeyEdit->setKeySequence(QKeySequence(m_settings->hotkey()));
+    if (m_languageCombo) {
+        const int idx = m_languageCombo->findData(m_settings->language());
+        m_languageCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+    }
     m_autostartCheck->setChecked(m_settings->autostart());
 
     const QStringList disabled = m_settings->disabledPlugins();
@@ -470,6 +499,10 @@ void SettingsDialog::syncFormFromSettings() {
 // 表单恢复出厂默认；不碰 m_settings/磁盘，用户仍需点"保存"才会落盘
 void SettingsDialog::resetToDefaults() {
     m_hotkeyEdit->setKeySequence(QKeySequence(AppSettings::defaultHotkey()));
+    if (m_languageCombo) {
+        const int idx = m_languageCombo->findData(AppSettings::defaultLanguage());
+        m_languageCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+    }
     m_autostartCheck->setChecked(AppSettings::defaultAutostart());
 
     for (QCheckBox *cb : m_pluginChecks) cb->setChecked(true); // 默认插件全部启用
@@ -519,7 +552,7 @@ void SettingsDialog::populatePathList(const QStringList &paths) {
 // 不值得为一个低频小表单冒这个风险
 std::optional<WebEngine> SettingsDialog::promptForWebEngine() {
     QDialog dlg(this);
-    dlg.setWindowTitle("添加网页搜索引擎");
+    dlg.setWindowTitle(I18n::t("settings.addEngineTitle"));
     dlg.setStyleSheet(QString("QDialog { background: %1; }").arg(kBg));
     dlg.setFixedWidth(320);
 
@@ -527,12 +560,12 @@ std::optional<WebEngine> SettingsDialog::promptForWebEngine() {
     cardLayout->setContentsMargins(20, 16, 20, 16);
     cardLayout->setSpacing(8);
 
-    cardLayout->addWidget(makeSectionLabel("名称"));
+    cardLayout->addWidget(makeSectionLabel(I18n::t("settings.name")));
     auto *nameEdit = new QLineEdit(&dlg);
     nameEdit->setStyleSheet(lineEditStyle());
     cardLayout->addWidget(nameEdit);
 
-    cardLayout->addWidget(makeSectionLabel("URL 模板（用 %1 占位查询词）"));
+    cardLayout->addWidget(makeSectionLabel(I18n::t("settings.urlTemplate")));
     auto *urlEdit = new QLineEdit(&dlg);
     urlEdit->setPlaceholderText("https://example.com/search?q=%1");
     urlEdit->setStyleSheet(lineEditStyle());
@@ -554,13 +587,13 @@ std::optional<WebEngine> SettingsDialog::promptForWebEngine() {
             border: none;
         }
     )");
-    auto         *cancelBtn = new QPushButton("取消", &dlg);
+    auto         *cancelBtn = new QPushButton(I18n::t("settings.cancel"), &dlg);
     cancelBtn->setStyleSheet(btnBase + QString(R"(
         QPushButton { background: %1; color: %2; }
         QPushButton:hover { background: #45475a; }
     )")
                                            .arg(kSurface0, kText));
-    auto *okBtn = new QPushButton("确定", &dlg);
+    auto *okBtn = new QPushButton(I18n::t("settings.ok"), &dlg);
     okBtn->setStyleSheet(btnBase + QString(R"(
         QPushButton { background: %1; color: #1e1e2e; font-weight: bold; }
         QPushButton:hover { background: #7aa2f7; }
@@ -574,12 +607,12 @@ std::optional<WebEngine> SettingsDialog::promptForWebEngine() {
     connect(cancelBtn, &QPushButton::clicked, &dlg, &QDialog::reject);
     connect(okBtn, &QPushButton::clicked, &dlg, [&] {
         if (nameEdit->text().trimmed().isEmpty()) {
-            errorLbl->setText("请输入名称");
+            errorLbl->setText(I18n::t("settings.nameRequired"));
             errorLbl->show();
             return;
         }
         if (!urlEdit->text().contains("%1")) {
-            errorLbl->setText("URL 模板必须包含 %1 占位符");
+            errorLbl->setText(I18n::t("settings.urlTemplateRequired"));
             errorLbl->show();
             return;
         }
@@ -601,6 +634,11 @@ void SettingsDialog::save() {
     const QString newHotkey = m_hotkeyEdit->keySequence().toString();
     if (newHotkey != m_settings->hotkey() && !newHotkey.isEmpty())
         m_settings->setHotkey(newHotkey);
+
+    const QString oldLanguage = m_settings->language();
+    const QString newLanguage =
+        m_languageCombo ? m_languageCombo->currentData().toString() : oldLanguage;
+    m_settings->setLanguage(newLanguage);
 
     m_settings->setAutostart(m_autostartCheck->isChecked());
 
@@ -634,6 +672,16 @@ void SettingsDialog::save() {
     }
 
     m_settings->save();
+
+    // 语言切换不做运行时热切换，需重启进程让所有窗口用新语言重新构建
+    if (newLanguage != oldLanguage &&
+        QMessageBox::question(this, I18n::t("settings.restartTitle"),
+                               I18n::t("settings.restartBody")) == QMessageBox::Yes) {
+        QProcess::startDetached(QApplication::applicationFilePath());
+        qApp->quit();
+        return;
+    }
+
     hide();
 }
 

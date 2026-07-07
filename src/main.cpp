@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "core/appsettings.h"
+#include "core/i18n.h"
 #include "plugins/appplugin.h"
 #include "plugins/commandplugin.h"
 #include "plugins/fileplugin.h"
@@ -17,7 +18,9 @@ int main(int argc, char *argv[]) {
     app.setApplicationName(
         "launcher"); // 决定 usage.json / settings.json 目录，须早于 MainWindow
 
-    auto      *settings = new AppSettings;
+    auto *settings = new AppSettings;
+    I18n::instance().init(settings->language()); // 须早于任何窗口构造，UI 文案才能取到正确语言
+
     MainWindow win(settings);
 
     auto *appPlugin = new AppPlugin;
@@ -27,13 +30,13 @@ int main(int argc, char *argv[]) {
 
     // "/" 前缀：launcher 自身命令。动作在此装配，命令插件本身不与具体能力耦合。
     auto *cmd = new CommandPlugin; // help 命令已内置自注册
-    cmd->addCommand("quit", "退出 launcher", [] { qApp->quit(); });
-    cmd->addCommand("reload", "重新加载应用列表", [appPlugin] { appPlugin->reload(); });
-    cmd->addCommand("datadir", "打开配置 / 数据目录", [] {
+    cmd->addCommand("quit", I18n::t("cmd.quit"), [] { qApp->quit(); });
+    cmd->addCommand("reload", I18n::t("cmd.reload"), [appPlugin] { appPlugin->reload(); });
+    cmd->addCommand("datadir", I18n::t("cmd.datadir"), [] {
         QDesktopServices::openUrl(QUrl::fromLocalFile(
             QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)));
     });
-    cmd->addCommand("restart", "重启 launcher", [] {
+    cmd->addCommand("restart", I18n::t("cmd.restart"), [] {
         QProcess::startDetached(QApplication::applicationFilePath());
         qApp->quit();
     });
@@ -41,7 +44,7 @@ int main(int argc, char *argv[]) {
 
     // 所有插件注册完毕后创建设置对话框（插件列表已完整）
     auto *settingsDialog = new SettingsDialog(settings, win.plugins());
-    cmd->addCommand("settings", "打开设置", [settingsDialog] {
+    cmd->addCommand("settings", I18n::t("cmd.settings"), [settingsDialog] {
         settingsDialog->show();
         settingsDialog->raise();
         settingsDialog->activateWindow();
