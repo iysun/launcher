@@ -61,7 +61,8 @@
         "outputOnFailure": true
       },
       "environment": {
-        "PATH": "$env{QT_DIR}\\bin;$env{MINGW};$penv{PATH}"
+        "PATH": "$env{QT_DIR}\\bin;$env{MINGW};$penv{PATH}",
+        "QT_QPA_PLATFORM_PLUGIN_PATH": "$env{QT_DIR}\\plugins\\platforms"
       }
     },
     {

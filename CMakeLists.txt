@@ -55,3 +55,16 @@ qt_add_executable(matcher_test
 target_include_directories(matcher_test PRIVATE src)
 target_link_libraries(matcher_test PRIVATE Qt6::Test)
 add_test(NAME matcher_test COMMAND matcher_test)
+
+# UsageStore（frecency）+ Theme（外观模式/颜色兜底/分类）单测。Theme::init 走 QPainter/
+# styleHints，须 QGuiApplication，故链 Qt6::Gui 并用 offscreen 平台；含 resources.qrc 以便
+# :/themes/*.json 可用（AUTORCC 自动编译）。
+qt_add_executable(core_test
+    tests/test_core.cpp
+    src/core/theme.cpp
+    src/core/usagestore.cpp
+    resources/resources.qrc
+)
+target_include_directories(core_test PRIVATE src)
+target_link_libraries(core_test PRIVATE Qt6::Gui Qt6::Test)
+add_test(NAME core_test COMMAND core_test)
