@@ -21,7 +21,8 @@ int main(int argc, char *argv[]) {
 
     auto *settings = new AppSettings;
     I18n::instance().init(settings->language()); // 须早于任何窗口构造，UI 文案才能取到正确语言
-    Theme::instance().init(settings->theme());    // 同理，须早于任何窗口构造，颜色才能取到正确主题
+    // 同理，须早于任何窗口构造，颜色才能取到正确主题；system 外观在此按启动时的系统偏好解析一次
+    Theme::instance().init(settings->appearanceMode(), settings->darkTheme(), settings->lightTheme());
 
     MainWindow win(settings);
 

@@ -239,11 +239,11 @@ public:
 
 `Theme`（`src/core/theme.h` / `.cpp`）形状与 `I18n` 完全一致：主题包是**用户数据目录**下的 `themes/<code>.json` 文件，不是编译期资源，运行时可直接编辑/新增。
 
-- 内置 `mocha`（深色，Catppuccin Mocha）/ `latte`（浅色，Catppuccin Latte）/ `dracula` / `nord` 四套主题源文件在 `resources/themes/*.json`，通过 `resources/resources.qrc` 的 `/themes` prefix 打进 Qt 资源；首次运行时 `Theme::ensureDefaultFiles()` 会把它们落盘到 `<datadir>/themes/`。落盘只在目标文件不存在时写入，不会覆盖用户已编辑的内容。
+- 内置 `mocha`（深色，Catppuccin Mocha）/ `latte`（浅色，Catppuccin Latte）/ `dracula`（深色）/ `nord`（深色）四套主题源文件在 `resources/themes/*.json`，通过 `resources/resources.qrc` 的 `/themes` prefix 打进 Qt 资源；首次运行时 `Theme::ensureDefaultFiles()` 会把它们落盘到 `<datadir>/themes/`。落盘只在目标文件不存在时写入，不会覆盖用户已编辑的内容。
 - 主题文件格式：
   ```json
   {
-      "meta": { "code": "solarized", "name": "Solarized" },
+      "meta": { "code": "solarized", "name": "Solarized", "appearance": "dark" },
       "colors": {
           "bg": "#002b36", "surface": "#073642", "border": "#586e75",
           "text": "#839496", "overlay": "#657b83", "accent": "#268bd2",
@@ -252,8 +252,9 @@ public:
       }
   }
   ```
-  `meta.code` 是主题标识（存进 `settings.json` 的 `theme` 字段），`meta.name` 是设置页主题下拉框里显示的名字。`colors` 是一张扁平的颜色角色表，10 个角色缺一不可（缺的角色会退回内置 mocha 的对应色，仍缺则显示醒目的洋红 `#ff00ff`，便于一眼发现遗漏而不是隐形崩溃）。
-- **新增一个主题**：在 `<datadir>/themes/` 下新建一个 `<code>.json`（照抄内置文件的 `colors` 结构，把颜色值换成目标配色），`Theme::availableThemes()` 会在设置页打开时自动扫描该目录下所有 `*.json`，无需改代码、无需重新编译。
+  `meta.code` 是主题标识，`meta.name` 是设置页主题下拉框里显示的名字，`meta.appearance`（`"dark"` / `"light"`）决定这套主题出现在设置页的"深色主题"下拉框还是"浅色主题"下拉框里——**缺失或非法值一律按 `"dark"` 归类**，不会导致主题从下拉框里消失，只是可能出现在不符合预期的那一个分类下，新增自定义主题时应显式填对。`colors` 是一张扁平的颜色角色表，10 个角色缺一不可（缺的角色会退回内置 mocha 的对应色，仍缺则显示醒目的洋红 `#ff00ff`，便于一眼发现遗漏而不是隐形崩溃）。
+- **新增一个主题**：在 `<datadir>/themes/` 下新建一个 `<code>.json`（照抄内置文件的 `colors` 结构，把颜色值换成目标配色，别忘了填 `meta.appearance`），`Theme::availableThemes()` 会在设置页打开时自动扫描该目录下所有 `*.json`，无需改代码、无需重新编译。
 - **颜色角色缺失时的回退链**：当前主题缺角色 → 回退到内置 mocha 的对应角色 → 仍缺则用醒目的洋红 `#ff00ff`。
-- **主题切换不做运行时热切换**：`Theme::init()` 只在启动时调用一次，与语言切换共用同一条重启确认（`SettingsDialog::save()`：语言或主题任一变更都会弹窗询问是否立即重启进程）。
-- 勾选框对勾、下拉箭头这两个 `QSS image: url(...)` 引用的小图标不是编译期烘焙的 PNG（主题数据驱动、用户可任意新增后没法为每个主题预生成），而是 `Theme::init()` 里按当前主题色用 `QPainter` 现画，落盘到 `<datadir>/theme-cache/`，通过磁盘绝对路径引用（详见 [docs/notes/qss-checkbox-checkmark.md](docs/notes/qss-checkbox-checkmark.md)）。
+- **外观模式（类 Zed 设计）**：设置页不是直接选一个具体主题，而是三项联动——「外观」下拉框选深色 / 浅色 / 跟随系统（`settings.json` 的 `appearanceMode` 字段），以及分别为深色、浅色各配一个默认主题（`darkTheme` / `lightTheme` 字段，出厂默认 `mocha` / `latte`）。`Theme::init(appearanceMode, darkCode, lightCode)` 在启动时解析出最终生效的主题：`appearanceMode` 为 `"dark"`/`"light"` 时直接用对应字段；为 `"system"` 时用 `QGuiApplication::styleHints()->colorScheme()`（Qt 6.5+ 跨平台 API）查一次当前系统深浅色偏好，查不到（部分不支持系统级查询的 Linux 桌面环境返回 `Unknown`）时按深色兜底。
+- **不做运行时热切换**：`Theme::init()` 只在启动时调用一次——包括"跟随系统"，也只在这一刻解析，运行期间系统深浅色再变化不会让已打开的 launcher 跟着变，需要重新启动才会按最新系统状态重新解析。三项外观设置（外观模式/深色主题/浅色主题）与语言切换共用同一条重启确认（`SettingsDialog::save()`：任一变更都会弹窗询问是否立即重启进程，只弹一次）。
+- 勾选框对勾、下拉箭头这两个 `QSS image: url(...)` 引用的小图标不是编译期烘焙的 PNG（主题数据驱动、用户可任意新增后没法为每个主题预生成），而是 `Theme::init()` 里按解析出的最终主题色用 `QPainter` 现画，落盘到 `<datadir>/theme-cache/`，通过磁盘绝对路径引用（详见 [docs/notes/qss-checkbox-checkmark.md](docs/notes/qss-checkbox-checkmark.md)）。

@@ -1,5 +1,5 @@
 {
-    "meta": { "code": "latte", "name": "Light (Catppuccin Latte)" },
+    "meta": { "code": "latte", "name": "Light (Catppuccin Latte)", "appearance": "light" },
     "colors": {
         "bg": "#eff1f5",
         "surface": "#ccd0da",

@@ -24,7 +24,12 @@
         "settings.nameRequired": "请输入名称",
         "settings.urlTemplateRequired": "URL 模板必须包含 %1 占位符",
         "settings.language": "语言",
-        "settings.theme": "主题",
+        "settings.appearance": "外观",
+        "settings.appearanceDark": "深色",
+        "settings.appearanceLight": "浅色",
+        "settings.appearanceSystem": "跟随系统",
+        "settings.darkTheme": "深色主题",
+        "settings.lightTheme": "浅色主题",
         "settings.restartTitle": "需要重启",
         "settings.restartBody": "部分设置已更改，需重启 launcher 后生效。是否现在重启？",
 

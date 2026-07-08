@@ -1,5 +1,5 @@
 {
-    "meta": { "code": "dracula", "name": "Dracula" },
+    "meta": { "code": "dracula", "name": "Dracula", "appearance": "dark" },
     "colors": {
         "bg": "#282a36",
         "surface": "#343746",

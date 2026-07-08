@@ -13,7 +13,9 @@ public:
 
     QString           hotkey() const { return m_hotkey; }
     QString           language() const { return m_language; }
-    QString           theme() const { return m_theme; }
+    QString           appearanceMode() const { return m_appearanceMode; }
+    QString           darkTheme() const { return m_darkTheme; }
+    QString           lightTheme() const { return m_lightTheme; }
     bool              autostart() const { return m_autostart; }
     QStringList       disabledPlugins() const { return m_disabledPlugins; }
     QStringList       webEngineOrder() const { return m_webEngineOrder; }
@@ -23,7 +25,9 @@ public:
 
     void setHotkey(const QString &seq);
     void setLanguage(const QString &code);
-    void setTheme(const QString &code);
+    void setAppearanceMode(const QString &mode);
+    void setDarkTheme(const QString &code);
+    void setLightTheme(const QString &code);
     void setAutostart(bool on);
     void setDisabledPlugins(const QStringList &names);
     void setWebEngineOrder(const QStringList &order);
@@ -35,7 +39,9 @@ public:
     // 出厂默认值：供设置页"重置"使用
     static QString      defaultHotkey() { return "Alt+Space"; }
     static QString      defaultLanguage() { return "zh"; }
-    static QString      defaultTheme() { return "mocha"; }
+    static QString      defaultAppearanceMode() { return "dark"; }
+    static QString      defaultDarkTheme() { return "mocha"; }
+    static QString      defaultLightTheme() { return "latte"; }
     static bool         defaultAutostart() { return false; }
     static QStringList  defaultWebEngineOrder() { return {"google", "bing", "baidu", "github"}; }
     static QStringList  defaultFileSearchPaths();
@@ -47,10 +53,12 @@ private:
     void load();
     void applyAutostart(bool on) const;
 
-    QString          m_hotkey    = "Alt+Space";
-    QString          m_language  = "zh";
-    QString          m_theme     = "mocha";
-    bool             m_autostart = false;
+    QString          m_hotkey         = "Alt+Space";
+    QString          m_language       = "zh";
+    QString          m_appearanceMode = "dark";
+    QString          m_darkTheme      = "mocha";
+    QString          m_lightTheme     = "latte";
+    bool             m_autostart      = false;
     QStringList      m_disabledPlugins;
     QStringList      m_webEngineOrder = {"google", "bing", "baidu", "github"};
     QList<WebEngine> m_customWebEngines;

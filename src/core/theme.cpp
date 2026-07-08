@@ -1,11 +1,13 @@
 #include "core/theme.h"
 #include <QDir>
 #include <QFile>
+#include <QGuiApplication>
 #include <QImage>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPainter>
 #include <QStandardPaths>
+#include <QStyleHints>
 #include <QVector>
 
 Theme &Theme::instance() {
@@ -85,11 +87,24 @@ void Theme::generateIcons() const {
                        {{2, 4}, {6, 8.5}, {10, 4}});
 }
 
-void Theme::init(const QString &themeCode) {
+// appearanceMode 为 "dark"/"light" 时直接取对应的 code；为 "system" 时查一次系统深浅色
+// 偏好折算——Qt::ColorScheme::Unknown（部分 Linux 桌面环境不支持系统级查询）按 dark 兜底。
+QString Theme::resolveCode(const QString &appearanceMode, const QString &darkCode,
+                           const QString &lightCode) const {
+    QString mode = appearanceMode;
+    if (mode == "system") {
+        const Qt::ColorScheme scheme = QGuiApplication::styleHints()->colorScheme();
+        mode                         = scheme == Qt::ColorScheme::Light ? "light" : "dark";
+    }
+    return mode == "light" ? lightCode : darkCode;
+}
+
+void Theme::init(const QString &appearanceMode, const QString &darkCode, const QString &lightCode) {
     ensureDefaultFiles();
 
-    m_code          = themeCode.isEmpty() ? "mocha" : themeCode;
-    m_mochaFallback = loadColors(":/themes/mocha.json");
+    const QString resolved = resolveCode(appearanceMode, darkCode, lightCode);
+    m_code                 = resolved.isEmpty() ? "mocha" : resolved;
+    m_mochaFallback        = loadColors(":/themes/mocha.json");
 
     m_colors = loadColors(themesDir() + "/" + m_code + ".json");
     if (m_colors.isEmpty()) // 内置主题的 datadir 副本理论上落盘后必然存在；此处兜底覆盖异常场景
@@ -123,7 +138,7 @@ QString Theme::chevronIconPath() {
     return QDir::fromNativeSeparators(cacheDir() + "/chevron-down.png");
 }
 
-QList<QPair<QString, QString>> Theme::availableThemes() const {
+QList<QPair<QString, QString>> Theme::availableThemes(const QString &appearance) const {
     QList<QPair<QString, QString>> result;
     QDir                             dir(themesDir());
     for (const QString &fileName : dir.entryList({"*.json"}, QDir::Files)) {
@@ -133,6 +148,12 @@ QList<QPair<QString, QString>> Theme::availableThemes() const {
         const QString     code = meta["code"].toString();
         const QString     name = meta["name"].toString();
         if (code.isEmpty() || name.isEmpty()) continue; // 缺元信息的文件跳过，避免下拉框出现空项
+
+        // 缺失/非法 appearance 一律按 dark 归类，保证主题不会从任一下拉框里隐形消失
+        QString themeAppearance = meta["appearance"].toString();
+        if (themeAppearance != "dark" && themeAppearance != "light") themeAppearance = "dark";
+        if (!appearance.isEmpty() && themeAppearance != appearance) continue;
+
         result.append({code, name});
     }
     return result;

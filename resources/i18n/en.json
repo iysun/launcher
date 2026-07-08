@@ -24,7 +24,12 @@
         "settings.nameRequired": "Please enter a name",
         "settings.urlTemplateRequired": "URL template must contain the %1 placeholder",
         "settings.language": "Language",
-        "settings.theme": "Theme",
+        "settings.appearance": "Appearance",
+        "settings.appearanceDark": "Dark",
+        "settings.appearanceLight": "Light",
+        "settings.appearanceSystem": "Follow System",
+        "settings.darkTheme": "Dark Theme",
+        "settings.lightTheme": "Light Theme",
         "settings.restartTitle": "Restart Required",
         "settings.restartBody": "Some settings have changed and require a restart of launcher to take effect. Restart now?",
 

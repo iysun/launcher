@@ -208,20 +208,35 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         m_languageCombo->addItem(lang.second, lang.first);
     contentLayout->addWidget(m_languageCombo);
 
-    // 主题
-    auto *sepTheme = new QFrame(content);
-    sepTheme->setFrameShape(QFrame::HLine);
-    sepTheme->setStyleSheet(
+    // 外观：深色 / 浅色 / 跟随系统，以及各自默认使用的主题（类 Zed 设计）
+    auto *sepAppearance = new QFrame(content);
+    sepAppearance->setFrameShape(QFrame::HLine);
+    sepAppearance->setStyleSheet(
         QString("background: %1; border: none; max-height: 1px; margin: 4px 0;")
             .arg(Theme::c("border")));
-    contentLayout->addWidget(sepTheme);
+    contentLayout->addWidget(sepAppearance);
 
-    contentLayout->addWidget(makeSectionLabel(I18n::t("settings.theme")));
-    m_themeCombo = new QComboBox(content);
-    m_themeCombo->setStyleSheet(comboStyle);
-    for (const auto &th : Theme::instance().availableThemes())
-        m_themeCombo->addItem(th.second, th.first);
-    contentLayout->addWidget(m_themeCombo);
+    contentLayout->addWidget(makeSectionLabel(I18n::t("settings.appearance")));
+    m_appearanceCombo = new QComboBox(content);
+    m_appearanceCombo->setStyleSheet(comboStyle);
+    m_appearanceCombo->addItem(I18n::t("settings.appearanceDark"), "dark");
+    m_appearanceCombo->addItem(I18n::t("settings.appearanceLight"), "light");
+    m_appearanceCombo->addItem(I18n::t("settings.appearanceSystem"), "system");
+    contentLayout->addWidget(m_appearanceCombo);
+
+    contentLayout->addWidget(makeSectionLabel(I18n::t("settings.darkTheme")));
+    m_darkThemeCombo = new QComboBox(content);
+    m_darkThemeCombo->setStyleSheet(comboStyle);
+    for (const auto &th : Theme::instance().availableThemes("dark"))
+        m_darkThemeCombo->addItem(th.second, th.first);
+    contentLayout->addWidget(m_darkThemeCombo);
+
+    contentLayout->addWidget(makeSectionLabel(I18n::t("settings.lightTheme")));
+    m_lightThemeCombo = new QComboBox(content);
+    m_lightThemeCombo->setStyleSheet(comboStyle);
+    for (const auto &th : Theme::instance().availableThemes("light"))
+        m_lightThemeCombo->addItem(th.second, th.first);
+    contentLayout->addWidget(m_lightThemeCombo);
 
     // 开机自启动
     auto *sep1 = new QFrame(content);
@@ -519,9 +534,17 @@ void SettingsDialog::syncFormFromSettings() {
         const int idx = m_languageCombo->findData(m_settings->language());
         m_languageCombo->setCurrentIndex(idx >= 0 ? idx : 0);
     }
-    if (m_themeCombo) {
-        const int idx = m_themeCombo->findData(m_settings->theme());
-        m_themeCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+    if (m_appearanceCombo) {
+        const int idx = m_appearanceCombo->findData(m_settings->appearanceMode());
+        m_appearanceCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+    }
+    if (m_darkThemeCombo) {
+        const int idx = m_darkThemeCombo->findData(m_settings->darkTheme());
+        m_darkThemeCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+    }
+    if (m_lightThemeCombo) {
+        const int idx = m_lightThemeCombo->findData(m_settings->lightTheme());
+        m_lightThemeCombo->setCurrentIndex(idx >= 0 ? idx : 0);
     }
     m_autostartCheck->setChecked(m_settings->autostart());
 
@@ -541,9 +564,17 @@ void SettingsDialog::resetToDefaults() {
         const int idx = m_languageCombo->findData(AppSettings::defaultLanguage());
         m_languageCombo->setCurrentIndex(idx >= 0 ? idx : 0);
     }
-    if (m_themeCombo) {
-        const int idx = m_themeCombo->findData(AppSettings::defaultTheme());
-        m_themeCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+    if (m_appearanceCombo) {
+        const int idx = m_appearanceCombo->findData(AppSettings::defaultAppearanceMode());
+        m_appearanceCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+    }
+    if (m_darkThemeCombo) {
+        const int idx = m_darkThemeCombo->findData(AppSettings::defaultDarkTheme());
+        m_darkThemeCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+    }
+    if (m_lightThemeCombo) {
+        const int idx = m_lightThemeCombo->findData(AppSettings::defaultLightTheme());
+        m_lightThemeCombo->setCurrentIndex(idx >= 0 ? idx : 0);
     }
     m_autostartCheck->setChecked(AppSettings::defaultAutostart());
 
@@ -682,10 +713,20 @@ void SettingsDialog::save() {
         m_languageCombo ? m_languageCombo->currentData().toString() : oldLanguage;
     m_settings->setLanguage(newLanguage);
 
-    const QString oldTheme = m_settings->theme();
-    const QString newTheme =
-        m_themeCombo ? m_themeCombo->currentData().toString() : oldTheme;
-    m_settings->setTheme(newTheme);
+    const QString oldAppearance = m_settings->appearanceMode();
+    const QString newAppearance =
+        m_appearanceCombo ? m_appearanceCombo->currentData().toString() : oldAppearance;
+    m_settings->setAppearanceMode(newAppearance);
+
+    const QString oldDarkTheme = m_settings->darkTheme();
+    const QString newDarkTheme =
+        m_darkThemeCombo ? m_darkThemeCombo->currentData().toString() : oldDarkTheme;
+    m_settings->setDarkTheme(newDarkTheme);
+
+    const QString oldLightTheme = m_settings->lightTheme();
+    const QString newLightTheme =
+        m_lightThemeCombo ? m_lightThemeCombo->currentData().toString() : oldLightTheme;
+    m_settings->setLightTheme(newLightTheme);
 
     m_settings->setAutostart(m_autostartCheck->isChecked());
 
@@ -720,8 +761,9 @@ void SettingsDialog::save() {
 
     m_settings->save();
 
-    // 语言/主题切换都不做运行时热切换，需重启进程让所有窗口用新语言/新主题重新构建
-    if ((newLanguage != oldLanguage || newTheme != oldTheme) &&
+    // 语言/外观设置都不做运行时热切换，需重启进程让所有窗口用新语言/新主题重新构建
+    if ((newLanguage != oldLanguage || newAppearance != oldAppearance ||
+         newDarkTheme != oldDarkTheme || newLightTheme != oldLightTheme) &&
         QMessageBox::question(this, I18n::t("settings.restartTitle"),
                                I18n::t("settings.restartBody")) == QMessageBox::Yes) {
         QProcess::startDetached(QApplication::applicationFilePath());
