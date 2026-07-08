@@ -50,6 +50,8 @@
 
         "hotkey.pressKeys": "(Press a key combo...)",
         "hotkey.clickToRecord": "Click then press a key combo",
+        "hotkey.registerFailedTitle": "Hotkey registration failed",
+        "hotkey.registerFailedBody": "The global hotkey could not be registered (it may be reserved by the system or another app). Change it in /settings.",
 
         "web.searchIn": "Search %1",
 

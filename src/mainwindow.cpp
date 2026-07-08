@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <QApplication>
 #include <QCursor>
+#include <QDebug>
 #include <QFutureWatcher>
 #include <QtConcurrentRun>
 #include <QFrame>
@@ -48,6 +49,7 @@ MainWindow::MainWindow(AppSettings *settings, QWidget *parent)
                 [this](const QString &seq) {
                     m_hotkey->setRegistered(false);
                     m_hotkey->setShortcut(QKeySequence(seq), true);
+                    notifyHotkeyStatus(); // 换热键后若新热键注册失败，同样提示
                 });
     }
 
@@ -68,9 +70,34 @@ MainWindow::MainWindow(AppSettings *settings, QWidget *parent)
             });
 
     m_tray->show();
+
+    // 托盘就绪后再提示：热键在构造 QHotkey 时即尝试注册，失败（如被系统/其他程序占用）
+    // 时用户只会遇到"按热键唤不起来"却无从得知原因，这里用托盘气泡把失败可见化
+    notifyHotkeyStatus();
+}
+
+void MainWindow::notifyHotkeyStatus() {
+    if (!m_hotkey || m_hotkey->isRegistered()) return;
+    if (m_tray)
+        m_tray->showMessage(I18n::t("hotkey.registerFailedTitle"),
+                            I18n::t("hotkey.registerFailedBody"),
+                            QSystemTrayIcon::Warning, 8000);
 }
 
 void MainWindow::addPlugin(IPlugin *plugin) {
+    // 触发前缀冲突检测：两个插件注册同一非空前缀时，靠 runQuery 的"谁先匹配谁生效"会
+    // 静默遮蔽后者。插件少时不易察觉，加装配期告警便于新增插件时第一时间发现。
+    const QString prefix = plugin->triggerPrefix();
+    if (!prefix.isEmpty()) {
+        for (IPlugin *p : m_plugins) {
+            if (p->triggerPrefix() == prefix) {
+                qWarning().noquote()
+                    << "触发前缀冲突：" << prefix << "已被" << p->name() << "占用，"
+                    << plugin->name() << "将被遮蔽";
+                break;
+            }
+        }
+    }
     m_plugins.append(plugin);
 }
 

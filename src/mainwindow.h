@@ -37,6 +37,7 @@ private:
     void  onAsyncResults(IPlugin                 *p,
                          const QList<ResultItem> &r); // 异步结果到达（已过代次校验）
     void  centerOnScreen();
+    void  notifyHotkeyStatus();  // 全局热键注册失败时用托盘气泡提示（否则用户只见"唤不起来"）
     void  flushPendingQuery(); // 回车前冲刷防抖，确保作用于最新关键词的结果
     void  activate(QListWidgetItem *item, bool alt); // alt=Ctrl+Enter 触发次级动作
     bool  handleEmacsKey(QKeyEvent *key);            // Emacs 风格键位，消费则返回 true

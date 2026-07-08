@@ -50,6 +50,8 @@
 
         "hotkey.pressKeys": "(按下快捷键...)",
         "hotkey.clickToRecord": "点击后按下快捷键",
+        "hotkey.registerFailedTitle": "热键注册失败",
+        "hotkey.registerFailedBody": "当前全局热键未能注册（可能被系统或其他程序占用）。请在 /settings 里更换热键。",
 
         "web.searchIn": "在 %1 中搜索",
 
