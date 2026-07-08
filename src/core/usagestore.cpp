@@ -5,6 +5,7 @@
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSaveFile>
 #include <QStandardPaths>
 
 // frecency 加分上限。须显著小于匹配档之间的间距（子串 300 / 词首 600 / 前缀 800），
@@ -43,9 +44,13 @@ void UsageStore::save() const {
         o["lastUsed"]  = it.value().lastUsed;
         root[it.key()] = o;
     }
-    QFile f(path);
-    if (f.open(QIODevice::WriteOnly))
+    // 原子写：先写临时文件再 rename，避免进程在写一半时被杀导致 usage.json 截断损坏，
+    // 而 load() 对损坏文件会静默回退空表——那样用户的 frecency 记录会无声丢失
+    QSaveFile f(path);
+    if (f.open(QIODevice::WriteOnly)) {
         f.write(QJsonDocument(root).toJson(QJsonDocument::Compact));
+        f.commit();
+    }
 }
 
 void UsageStore::recordUse(const QString &key) {

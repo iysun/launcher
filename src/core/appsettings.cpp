@@ -5,6 +5,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMutexLocker>
+#include <QSaveFile>
 #include <QSettings>
 #include <QStandardPaths>
 
@@ -119,8 +120,13 @@ void AppSettings::save() const {
     const QString path =
         QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
         "/settings.json";
-    QFile f(path);
-    if (f.open(QIODevice::WriteOnly)) f.write(QJsonDocument(obj).toJson());
+    // 原子写：先写临时文件再 rename，避免进程在写一半时被杀导致 settings.json 截断损坏，
+    // 而 load() 对损坏文件会静默回退默认值——那样用户的全部配置会无声丢失
+    QSaveFile f(path);
+    if (f.open(QIODevice::WriteOnly)) {
+        f.write(QJsonDocument(obj).toJson());
+        f.commit();
+    }
 }
 
 void AppSettings::load() {
