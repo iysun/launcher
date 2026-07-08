@@ -1,0 +1,15 @@
+{
+    "meta": { "code": "nord", "name": "Nord" },
+    "colors": {
+        "bg": "#2e3440",
+        "surface": "#3b4252",
+        "border": "#434c5e",
+        "text": "#d8dee9",
+        "overlay": "#4c566a",
+        "accent": "#81a1c1",
+        "hoverBg": "#292f3a",
+        "highlight": "#ebcb8b",
+        "accentHover": "#88c0d0",
+        "danger": "#bf616a"
+    }
+}

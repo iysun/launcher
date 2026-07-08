@@ -1,6 +1,7 @@
 #include "settingsdialog.h"
 #include "core/appsettings.h"
 #include "core/i18n.h"
+#include "core/theme.h"
 #include "plugins/webplugin.h"
 #include "ui/hotkeyedit.h"
 #include <QApplication>
@@ -26,14 +27,6 @@
 #include <QUuid>
 #include <QVBoxLayout>
 
-// ── 颜色常量（Catppuccin Mocha） ──────────────────────────────
-static const char *kBg       = "#1e1e2e";
-static const char *kSurface0 = "#313244";
-static const char *kOverlay0 = "#6c7086";
-static const char *kText     = "#cdd6f4";
-static const char *kBlue     = "#89b4fa";
-static const char *kBorder   = "#45475a";
-
 SettingsDialog::SettingsDialog(AppSettings *settings, const QList<IPlugin *> &plugins)
     : QWidget(nullptr), m_settings(settings) {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
@@ -55,7 +48,7 @@ QLabel *SettingsDialog::makeSectionLabel(const QString &text) {
     auto *lbl = new QLabel(text);
     lbl->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: bold; "
                                "padding: 0; margin: 0;")
-                           .arg(kOverlay0));
+                           .arg(Theme::c("overlay")));
     return lbl;
 }
 
@@ -72,7 +65,7 @@ static QString lineEditStyle() {
         }
         QLineEdit:focus { border-color: %4; }
     )")
-        .arg(kSurface0, kText, kBorder, kBlue);
+        .arg(Theme::c("surface"), Theme::c("text"), Theme::c("border"), Theme::c("accent"));
 }
 
 void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
@@ -90,7 +83,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
             border-radius: 10px;
         }
     )")
-                            .arg(kBg, kBorder));
+                            .arg(Theme::c("bg"), Theme::c("border")));
     root->addWidget(card);
 
     auto *outer = new QVBoxLayout(card);
@@ -108,7 +101,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
 
     auto *titleLbl = new QLabel(I18n::t("settings.title"), titleBar);
     titleLbl->setStyleSheet(
-        QString("color: %1; font-size: 15px; font-weight: bold;").arg(kText));
+        QString("color: %1; font-size: 15px; font-weight: bold;").arg(Theme::c("text")));
     titleLayout->addWidget(titleLbl);
     titleLayout->addStretch();
 
@@ -124,7 +117,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         }
         QPushButton:hover { background: %2; }
     )")
-                                .arg(kOverlay0, kSurface0));
+                                .arg(Theme::c("overlay"), Theme::c("surface")));
     titleLayout->addWidget(closeBtn);
     connect(closeBtn, &QPushButton::clicked, this, &SettingsDialog::hide);
 
@@ -134,7 +127,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     auto *sep0 = new QFrame(card);
     sep0->setFrameShape(QFrame::HLine);
     sep0->setStyleSheet(
-        QString("background: %1; border: none; max-height: 1px;").arg(kBorder));
+        QString("background: %1; border: none; max-height: 1px;").arg(Theme::c("border")));
     outer->addWidget(sep0);
 
     // ── 内容区 ───────────────────────────────────────────────
@@ -158,10 +151,11 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         QCheckBox::indicator:checked {
             background: %4;
             border-color: %4;
-            image: url(:/icons/check.png);
+            image: url(%5);
         }
     )")
-                                   .arg(kText, kBorder, kSurface0, kBlue);
+                                   .arg(Theme::c("text"), Theme::c("border"), Theme::c("surface"),
+                                        Theme::c("accent"), Theme::checkIconPath());
 
     // 热键
     contentLayout->addWidget(makeSectionLabel(I18n::t("settings.hotkey")));
@@ -174,7 +168,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     sepLang->setFrameShape(QFrame::HLine);
     sepLang->setStyleSheet(
         QString("background: %1; border: none; max-height: 1px; margin: 4px 0;")
-            .arg(kBorder));
+            .arg(Theme::c("border")));
     contentLayout->addWidget(sepLang);
 
     contentLayout->addWidget(makeSectionLabel(I18n::t("settings.language")));
@@ -194,7 +188,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
             width: 24px; border: none; background: transparent;
         }
         QComboBox::down-arrow {
-            image: url(:/icons/chevron-down.png);
+            image: url(%6);
             width: 12px; height: 12px;
         }
         QComboBox QAbstractItemView {
@@ -203,21 +197,38 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
             outline: 0; padding: 2px;
         }
         QComboBox QAbstractItemView::item { padding: 4px 8px; min-height: 22px; }
-        QComboBox QAbstractItemView::item:selected { background: %4; color: #1e1e2e; }
+        QComboBox QAbstractItemView::item:selected { background: %4; color: %7; }
         QComboBox QAbstractItemView::item:hover:!selected { background: %3; }
     )")
-                                       .arg(kSurface0, kText, kBorder, kBlue, kOverlay0);
+                                       .arg(Theme::c("surface"), Theme::c("text"), Theme::c("border"),
+                                            Theme::c("accent"), Theme::c("overlay"),
+                                            Theme::chevronIconPath(), Theme::c("bg"));
     m_languageCombo->setStyleSheet(comboStyle);
     for (const auto &lang : I18n::instance().availableLanguages())
         m_languageCombo->addItem(lang.second, lang.first);
     contentLayout->addWidget(m_languageCombo);
+
+    // 主题
+    auto *sepTheme = new QFrame(content);
+    sepTheme->setFrameShape(QFrame::HLine);
+    sepTheme->setStyleSheet(
+        QString("background: %1; border: none; max-height: 1px; margin: 4px 0;")
+            .arg(Theme::c("border")));
+    contentLayout->addWidget(sepTheme);
+
+    contentLayout->addWidget(makeSectionLabel(I18n::t("settings.theme")));
+    m_themeCombo = new QComboBox(content);
+    m_themeCombo->setStyleSheet(comboStyle);
+    for (const auto &th : Theme::instance().availableThemes())
+        m_themeCombo->addItem(th.second, th.first);
+    contentLayout->addWidget(m_themeCombo);
 
     // 开机自启动
     auto *sep1 = new QFrame(content);
     sep1->setFrameShape(QFrame::HLine);
     sep1->setStyleSheet(
         QString("background: %1; border: none; max-height: 1px; margin: 4px 0;")
-            .arg(kBorder));
+            .arg(Theme::c("border")));
     contentLayout->addWidget(sep1);
 
     m_autostartCheck = new QCheckBox(I18n::t("settings.autostart"), content);
@@ -230,7 +241,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         sep2->setFrameShape(QFrame::HLine);
         sep2->setStyleSheet(
             QString("background: %1; border: none; max-height: 1px; margin: 4px 0;")
-                .arg(kBorder));
+                .arg(Theme::c("border")));
         contentLayout->addWidget(sep2);
 
         contentLayout->addWidget(makeSectionLabel(I18n::t("settings.plugins")));
@@ -251,7 +262,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         sep->setFrameShape(QFrame::HLine);
         sep->setStyleSheet(
             QString("background: %1; border: none; max-height: 1px; margin: 4px 0;")
-                .arg(kBorder));
+                .arg(Theme::c("border")));
         contentLayout->addWidget(sep);
 
         contentLayout->addWidget(makeSectionLabel(I18n::t("settings.webEngines")));
@@ -270,10 +281,11 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
                 font-size: 13px; outline: 0;
             }
             QListWidget::item { padding: 4px 8px; }
-            QListWidget::item:selected { background: %4; color: #1e1e2e; }
-            QListWidget::item:hover:!selected { background: #45475a; }
+            QListWidget::item:selected { background: %4; color: %5; }
+            QListWidget::item:hover:!selected { background: %3; }
         )")
-                                        .arg(kSurface0, kText, kBorder, kBlue));
+                                        .arg(Theme::c("surface"), Theme::c("text"), Theme::c("border"),
+                                             Theme::c("accent"), Theme::c("bg")));
 
         rowLayout->addWidget(m_engineList, 1);
 
@@ -284,10 +296,10 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
                 border: 1px solid %3; border-radius: 6px;
                 min-width: 44px; min-height: 32px;
             }
-            QPushButton:hover:!disabled { background: #45475a; }
+            QPushButton:hover:!disabled { background: %3; }
             QPushButton:disabled { color: %3; }
         )")
-                                          .arg(kSurface0, kText, kBorder);
+                                          .arg(Theme::c("surface"), Theme::c("text"), Theme::c("border"));
 
         auto *btnCol    = new QWidget(row);
         auto *btnLayout = new QVBoxLayout(btnCol);
@@ -358,7 +370,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         sep->setFrameShape(QFrame::HLine);
         sep->setStyleSheet(
             QString("background: %1; border: none; max-height: 1px; margin: 4px 0;")
-                .arg(kBorder));
+                .arg(Theme::c("border")));
         contentLayout->addWidget(sep);
 
         contentLayout->addWidget(makeSectionLabel(I18n::t("settings.fileSearchDirs")));
@@ -377,10 +389,11 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
                 font-size: 13px; outline: 0;
             }
             QListWidget::item { padding: 4px 8px; }
-            QListWidget::item:selected { background: %4; color: #1e1e2e; }
-            QListWidget::item:hover:!selected { background: #45475a; }
+            QListWidget::item:selected { background: %4; color: %5; }
+            QListWidget::item:hover:!selected { background: %3; }
         )")
-                                       .arg(kSurface0, kText, kBorder, kBlue));
+                                       .arg(Theme::c("surface"), Theme::c("text"), Theme::c("border"),
+                                            Theme::c("accent"), Theme::c("bg")));
 
         rowLayout->addWidget(m_pathList, 1);
 
@@ -390,9 +403,9 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
                 border: 1px solid %3; border-radius: 6px;
                 min-width: 44px; min-height: 32px;
             }
-            QPushButton:hover { background: #45475a; }
+            QPushButton:hover { background: %3; }
         )")
-                                        .arg(kSurface0, kText, kBorder);
+                                        .arg(Theme::c("surface"), Theme::c("text"), Theme::c("border"));
 
         auto *btnCol    = new QWidget(row);
         auto *btnLayout = new QVBoxLayout(btnCol);
@@ -437,7 +450,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         QScrollBar::handle:vertical { background: %2; border-radius: 4px; min-height: 24px; }
         QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
     )")
-                                    .arg(kBg, kBorder));
+                                    .arg(Theme::c("bg"), Theme::c("border")));
     scrollArea->viewport()->setStyleSheet("background: transparent;");
     scrollArea->setWidget(content);
     outer->addWidget(scrollArea, 1);
@@ -446,7 +459,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     auto *sep3 = new QFrame(card);
     sep3->setFrameShape(QFrame::HLine);
     sep3->setStyleSheet(
-        QString("background: %1; border: none; max-height: 1px;").arg(kBorder));
+        QString("background: %1; border: none; max-height: 1px;").arg(Theme::c("border")));
     outer->addWidget(sep3);
 
     auto *footer       = new QWidget(card);
@@ -468,7 +481,7 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
         QPushButton { background: transparent; color: %1; border: 1px solid %2; }
         QPushButton:hover { background: %3; }
     )")
-                                          .arg(kOverlay0, kBorder, kSurface0));
+                                          .arg(Theme::c("overlay"), Theme::c("border"), Theme::c("surface")));
     footerLayout->addWidget(resetBtn);
 
     footerLayout->addStretch();
@@ -476,17 +489,17 @@ void SettingsDialog::setupUi(const QList<IPlugin *> &plugins) {
     auto *cancelBtn = new QPushButton(I18n::t("settings.cancel"), footer);
     cancelBtn->setStyleSheet(btnBase + QString(R"(
         QPushButton { background: %1; color: %2; }
-        QPushButton:hover { background: #45475a; }
+        QPushButton:hover { background: %3; }
     )")
-                                           .arg(kSurface0, kText));
+                                           .arg(Theme::c("surface"), Theme::c("text"), Theme::c("border")));
     footerLayout->addWidget(cancelBtn);
 
     auto *saveBtn = new QPushButton(I18n::t("settings.save"), footer);
     saveBtn->setStyleSheet(btnBase + QString(R"(
-        QPushButton { background: %1; color: #1e1e2e; font-weight: bold; }
-        QPushButton:hover { background: #7aa2f7; }
+        QPushButton { background: %1; color: %2; font-weight: bold; }
+        QPushButton:hover { background: %3; }
     )")
-                                         .arg(kBlue));
+                                         .arg(Theme::c("accent"), Theme::c("bg"), Theme::c("accentHover")));
     footerLayout->addWidget(saveBtn);
 
     outer->addWidget(footer);
@@ -506,6 +519,10 @@ void SettingsDialog::syncFormFromSettings() {
         const int idx = m_languageCombo->findData(m_settings->language());
         m_languageCombo->setCurrentIndex(idx >= 0 ? idx : 0);
     }
+    if (m_themeCombo) {
+        const int idx = m_themeCombo->findData(m_settings->theme());
+        m_themeCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+    }
     m_autostartCheck->setChecked(m_settings->autostart());
 
     const QStringList disabled = m_settings->disabledPlugins();
@@ -523,6 +540,10 @@ void SettingsDialog::resetToDefaults() {
     if (m_languageCombo) {
         const int idx = m_languageCombo->findData(AppSettings::defaultLanguage());
         m_languageCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+    }
+    if (m_themeCombo) {
+        const int idx = m_themeCombo->findData(AppSettings::defaultTheme());
+        m_themeCombo->setCurrentIndex(idx >= 0 ? idx : 0);
     }
     m_autostartCheck->setChecked(AppSettings::defaultAutostart());
 
@@ -574,7 +595,7 @@ void SettingsDialog::populatePathList(const QStringList &paths) {
 std::optional<WebEngine> SettingsDialog::promptForWebEngine() {
     QDialog dlg(this);
     dlg.setWindowTitle(I18n::t("settings.addEngineTitle"));
-    dlg.setStyleSheet(QString("QDialog { background: %1; }").arg(kBg));
+    dlg.setStyleSheet(QString("QDialog { background: %1; }").arg(Theme::c("bg")));
     dlg.setFixedWidth(320);
 
     auto *cardLayout = new QVBoxLayout(&dlg);
@@ -593,7 +614,7 @@ std::optional<WebEngine> SettingsDialog::promptForWebEngine() {
     cardLayout->addWidget(urlEdit);
 
     auto *errorLbl = new QLabel(&dlg);
-    errorLbl->setStyleSheet("color: #f38ba8; font-size: 12px;");
+    errorLbl->setStyleSheet(QString("color: %1; font-size: 12px;").arg(Theme::c("danger")));
     errorLbl->hide();
     cardLayout->addWidget(errorLbl);
 
@@ -611,15 +632,15 @@ std::optional<WebEngine> SettingsDialog::promptForWebEngine() {
     auto         *cancelBtn = new QPushButton(I18n::t("settings.cancel"), &dlg);
     cancelBtn->setStyleSheet(btnBase + QString(R"(
         QPushButton { background: %1; color: %2; }
-        QPushButton:hover { background: #45475a; }
+        QPushButton:hover { background: %3; }
     )")
-                                           .arg(kSurface0, kText));
+                                           .arg(Theme::c("surface"), Theme::c("text"), Theme::c("border")));
     auto *okBtn = new QPushButton(I18n::t("settings.ok"), &dlg);
     okBtn->setStyleSheet(btnBase + QString(R"(
-        QPushButton { background: %1; color: #1e1e2e; font-weight: bold; }
-        QPushButton:hover { background: #7aa2f7; }
+        QPushButton { background: %1; color: %2; font-weight: bold; }
+        QPushButton:hover { background: %3; }
     )")
-                                       .arg(kBlue));
+                                       .arg(Theme::c("accent"), Theme::c("bg"), Theme::c("accentHover")));
     okBtn->setDefault(true);
     btnRow->addWidget(cancelBtn);
     btnRow->addWidget(okBtn);
@@ -661,6 +682,11 @@ void SettingsDialog::save() {
         m_languageCombo ? m_languageCombo->currentData().toString() : oldLanguage;
     m_settings->setLanguage(newLanguage);
 
+    const QString oldTheme = m_settings->theme();
+    const QString newTheme =
+        m_themeCombo ? m_themeCombo->currentData().toString() : oldTheme;
+    m_settings->setTheme(newTheme);
+
     m_settings->setAutostart(m_autostartCheck->isChecked());
 
     QStringList disabled;
@@ -694,8 +720,8 @@ void SettingsDialog::save() {
 
     m_settings->save();
 
-    // 语言切换不做运行时热切换，需重启进程让所有窗口用新语言重新构建
-    if (newLanguage != oldLanguage &&
+    // 语言/主题切换都不做运行时热切换，需重启进程让所有窗口用新语言/新主题重新构建
+    if ((newLanguage != oldLanguage || newTheme != oldTheme) &&
         QMessageBox::question(this, I18n::t("settings.restartTitle"),
                                I18n::t("settings.restartBody")) == QMessageBox::Yes) {
         QProcess::startDetached(QApplication::applicationFilePath());

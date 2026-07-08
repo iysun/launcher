@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "core/appsettings.h"
 #include "core/i18n.h"
+#include "core/theme.h"
 #include "core/usagestore.h"
 #include "ui/resultdelegate.h"
 #include <algorithm>
@@ -89,13 +90,14 @@ void MainWindow::setupUi() {
     auto *card = new QFrame(this);
     card->setObjectName("card");
     card->setFixedWidth(kWidth);
-    card->setStyleSheet(R"(
+    card->setStyleSheet(QString(R"(
         QFrame#card {
-            background: #1e1e2e;
-            border: 1px solid #45475a;
+            background: %1;
+            border: 1px solid %2;
             border-radius: 10px;
         }
-    )");
+    )")
+                             .arg(Theme::c("bg"), Theme::c("border")));
     root->addWidget(card);
 
     auto *cardLayout = new QVBoxLayout(card);
@@ -105,31 +107,33 @@ void MainWindow::setupUi() {
     m_search = new QLineEdit(card);
     m_search->setPlaceholderText(I18n::t("search.placeholder"));
     m_search->setFixedHeight(kSearchH);
-    m_search->setStyleSheet(R"(
+    m_search->setStyleSheet(QString(R"(
         QLineEdit {
             background: transparent;
-            color: #cdd6f4;
+            color: %1;
             font-size: 18px;
             padding: 0 16px;
             border: none;
         }
-    )");
+    )")
+                                 .arg(Theme::c("text")));
 
     m_list = new QListWidget(card);
     m_list->setFocusPolicy(Qt::StrongFocus);
     m_delegate = new ResultDelegate(m_list);
     m_list->setItemDelegate(m_delegate);
     m_list->setUniformItemSizes(true);
-    m_list->setStyleSheet(R"(
+    m_list->setStyleSheet(QString(R"(
         QListWidget {
             background: transparent;
-            color: #cdd6f4;
+            color: %1;
             border: none;
-            border-top: 1px solid #313244;
+            border-top: 1px solid %2;
             font-size: 14px;
             outline: 0;
         }
-    )");
+    )")
+                               .arg(Theme::c("text"), Theme::c("surface")));
     m_list->viewport()->setAutoFillBackground(false); // 让卡片底色透出
     m_list->hide();
 

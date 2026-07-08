@@ -48,6 +48,10 @@ void AppSettings::setLanguage(const QString &code) {
     m_language = code;
 }
 
+void AppSettings::setTheme(const QString &code) {
+    m_theme = code;
+}
+
 void AppSettings::setAutostart(bool on) {
     m_autostart = on;
     applyAutostart(on);
@@ -74,6 +78,7 @@ void AppSettings::save() const {
     QJsonObject obj;
     obj["hotkey"]    = m_hotkey;
     obj["language"]  = m_language;
+    obj["theme"]     = m_theme;
     obj["autostart"] = m_autostart;
 
     QJsonArray arr;
@@ -118,6 +123,7 @@ void AppSettings::load() {
     const QJsonObject obj = QJsonDocument::fromJson(f.readAll()).object();
     if (obj.contains("hotkey")) m_hotkey = obj["hotkey"].toString(m_hotkey);
     if (obj.contains("language")) m_language = obj["language"].toString(m_language);
+    if (obj.contains("theme")) m_theme = obj["theme"].toString(m_theme);
     if (obj.contains("autostart")) m_autostart = obj["autostart"].toBool(m_autostart);
     if (obj.contains("disabledPlugins")) {
         m_disabledPlugins.clear();

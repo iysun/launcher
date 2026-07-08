@@ -24,8 +24,9 @@
         "settings.nameRequired": "Please enter a name",
         "settings.urlTemplateRequired": "URL template must contain the %1 placeholder",
         "settings.language": "Language",
+        "settings.theme": "Theme",
         "settings.restartTitle": "Restart Required",
-        "settings.restartBody": "The language setting has changed and requires a restart of launcher to take effect. Restart now?",
+        "settings.restartBody": "Some settings have changed and require a restart of launcher to take effect. Restart now?",
 
         "help.title": "Help",
         "help.shortcuts": "Shortcuts",

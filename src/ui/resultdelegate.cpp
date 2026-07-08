@@ -1,5 +1,6 @@
 #include "ui/resultdelegate.h"
 #include "core/matcher.h"
+#include "core/theme.h"
 #include "plugin/resultitem.h"
 #include <QPainter>
 #include <QSet>
@@ -19,9 +20,9 @@ void ResultDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt,
     const bool selected = opt.state & QStyle::State_Selected;
 
     // 背景（delegate 自行绘制，CSS 不再处理 item 状态）
-    if (selected) p->fillRect(opt.rect, QColor("#313244"));
+    if (selected) p->fillRect(opt.rect, Theme::color("surface"));
     else if (opt.state & QStyle::State_MouseOver)
-        p->fillRect(opt.rect, QColor("#181825"));
+        p->fillRect(opt.rect, Theme::color("hoverBg"));
 
     const QRect r = opt.rect.adjusted(kPad, 0, -kPad, 0);
 
@@ -39,8 +40,8 @@ void ResultDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt,
     tf.setBold(true);
     p->setFont(tf);
     const QRect   titleR(textR.left(), textR.top() + 6, textR.width(), half);
-    const QColor  base = selected ? QColor("#89b4fa") : QColor("#cdd6f4");
-    const QColor  hi   = selected ? QColor("#f5e0dc") : QColor("#89b4fa");
+    const QColor  base = selected ? Theme::color("accent") : Theme::color("text");
+    const QColor  hi   = selected ? Theme::color("highlight") : Theme::color("accent");
     const QString disp =
         p->fontMetrics().elidedText(item.title, Qt::ElideRight, titleR.width());
     // 拼音命中时使用预计算的 title 字符下标（过滤超出省略范围的位置）；
@@ -82,7 +83,7 @@ void ResultDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt,
     QFont sf = opt.font;
     sf.setPointSize(8);
     p->setFont(sf);
-    p->setPen(QColor("#6c7086"));
+    p->setPen(Theme::color("overlay"));
     const QRect subR(textR.left(), textR.top() + half, textR.width(), half - 6);
     p->drawText(
         subR, Qt::AlignLeft | Qt::AlignVCenter,

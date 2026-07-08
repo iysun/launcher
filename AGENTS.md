@@ -160,7 +160,9 @@ src/
 │   ├── matcher.h / .cpp        # 共享匹配/打分（子串四档 + 子序列模糊），跨插件统一排序的依据
 │   ├── pinyin.h / .cpp         # CJK → 拼音转换，支持全拼/首字母搜索
 │   ├── usagestore.h / .cpp     # frecency 持久化（usage.json）
-│   └── appsettings.h / .cpp    # 用户配置持久化（settings.json）：热键、开机自启、插件启停、文件搜索目录
+│   ├── appsettings.h / .cpp    # 用户配置持久化（settings.json）：热键、开机自启、插件启停、文件搜索目录
+│   ├── i18n.h / .cpp           # 极简 i18n：datadir/i18n/<code>.json，见下方「自定义语言」
+│   └── theme.h / .cpp          # 极简主题：datadir/themes/<code>.json，见下方「自定义主题」
 ├── plugin/
 │   ├── iplugin.h               # IPlugin 接口（含 triggerPrefix 前缀路由）
 │   └── resultitem.h            # ResultItem 数据结构（含 owner / score，已注册 QMetaType）
@@ -230,3 +232,28 @@ public:
 - **翻译不全时的回退链**：当前语言缺 key → 回退到内置英文（`m_englishFallback`，永远从 `:/i18n/en.json` 加载，不受用户是否改过 datadir 里的 `en.json` 影响）→ 仍缺则直接显示 key 本身（如 `settings.title`），便于一眼发现遗漏而不是空白/崩溃。
 - **语言切换不做运行时热切换**：`I18n::init()` 只在启动时调用一次；`/settings` 保存时若语言变更，会弹窗询问是否立即重启进程（`SettingsDialog::save()`）。
 - 新增字符串 key：先在 `resources/i18n/zh.json`、`resources/i18n/en.json` 两个内置文件里都补上（缺了会走英文/key 回退，不会崩溃，但用户自定义语言文件不会自动同步，需要使用者自行补齐）。
+
+---
+
+## 自定义主题
+
+`Theme`（`src/core/theme.h` / `.cpp`）形状与 `I18n` 完全一致：主题包是**用户数据目录**下的 `themes/<code>.json` 文件，不是编译期资源，运行时可直接编辑/新增。
+
+- 内置 `mocha`（深色，Catppuccin Mocha）/ `latte`（浅色，Catppuccin Latte）/ `dracula` / `nord` 四套主题源文件在 `resources/themes/*.json`，通过 `resources/resources.qrc` 的 `/themes` prefix 打进 Qt 资源；首次运行时 `Theme::ensureDefaultFiles()` 会把它们落盘到 `<datadir>/themes/`。落盘只在目标文件不存在时写入，不会覆盖用户已编辑的内容。
+- 主题文件格式：
+  ```json
+  {
+      "meta": { "code": "solarized", "name": "Solarized" },
+      "colors": {
+          "bg": "#002b36", "surface": "#073642", "border": "#586e75",
+          "text": "#839496", "overlay": "#657b83", "accent": "#268bd2",
+          "hoverBg": "#00212b", "highlight": "#b58900",
+          "accentHover": "#2aa1f2", "danger": "#dc322f"
+      }
+  }
+  ```
+  `meta.code` 是主题标识（存进 `settings.json` 的 `theme` 字段），`meta.name` 是设置页主题下拉框里显示的名字。`colors` 是一张扁平的颜色角色表，10 个角色缺一不可（缺的角色会退回内置 mocha 的对应色，仍缺则显示醒目的洋红 `#ff00ff`，便于一眼发现遗漏而不是隐形崩溃）。
+- **新增一个主题**：在 `<datadir>/themes/` 下新建一个 `<code>.json`（照抄内置文件的 `colors` 结构，把颜色值换成目标配色），`Theme::availableThemes()` 会在设置页打开时自动扫描该目录下所有 `*.json`，无需改代码、无需重新编译。
+- **颜色角色缺失时的回退链**：当前主题缺角色 → 回退到内置 mocha 的对应角色 → 仍缺则用醒目的洋红 `#ff00ff`。
+- **主题切换不做运行时热切换**：`Theme::init()` 只在启动时调用一次，与语言切换共用同一条重启确认（`SettingsDialog::save()`：语言或主题任一变更都会弹窗询问是否立即重启进程）。
+- 勾选框对勾、下拉箭头这两个 `QSS image: url(...)` 引用的小图标不是编译期烘焙的 PNG（主题数据驱动、用户可任意新增后没法为每个主题预生成），而是 `Theme::init()` 里按当前主题色用 `QPainter` 现画，落盘到 `<datadir>/theme-cache/`，通过磁盘绝对路径引用（详见 [docs/notes/qss-checkbox-checkmark.md](docs/notes/qss-checkbox-checkmark.md)）。

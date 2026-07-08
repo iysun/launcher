@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "core/appsettings.h"
 #include "core/i18n.h"
+#include "core/theme.h"
 #include "plugins/appplugin.h"
 #include "plugins/commandplugin.h"
 #include "plugins/fileplugin.h"
@@ -20,6 +21,7 @@ int main(int argc, char *argv[]) {
 
     auto *settings = new AppSettings;
     I18n::instance().init(settings->language()); // 须早于任何窗口构造，UI 文案才能取到正确语言
+    Theme::instance().init(settings->theme());    // 同理，须早于任何窗口构造，颜色才能取到正确主题
 
     MainWindow win(settings);
 

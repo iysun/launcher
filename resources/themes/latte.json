@@ -1,0 +1,15 @@
+{
+    "meta": { "code": "latte", "name": "Light (Catppuccin Latte)" },
+    "colors": {
+        "bg": "#eff1f5",
+        "surface": "#ccd0da",
+        "border": "#bcc0cc",
+        "text": "#4c4f69",
+        "overlay": "#9ca0b0",
+        "accent": "#1e66f5",
+        "hoverBg": "#dce0e8",
+        "highlight": "#dc8a78",
+        "accentHover": "#1a57d0",
+        "danger": "#d20f39"
+    }
+}

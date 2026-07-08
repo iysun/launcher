@@ -1,0 +1,15 @@
+{
+    "meta": { "code": "dracula", "name": "Dracula" },
+    "colors": {
+        "bg": "#282a36",
+        "surface": "#343746",
+        "border": "#44475a",
+        "text": "#f8f8f2",
+        "overlay": "#6272a4",
+        "accent": "#bd93f9",
+        "hoverBg": "#21222c",
+        "highlight": "#ff79c6",
+        "accentHover": "#caa9fa",
+        "danger": "#ff5555"
+    }
+}

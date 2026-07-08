@@ -1,11 +1,15 @@
 <RCC>
   <qresource prefix="/icons">
     <file alias="tray.png">icons/tray.png</file>
-    <file alias="check.png">icons/check.png</file>
-    <file alias="chevron-down.png">icons/chevron-down.png</file>
   </qresource>
   <qresource prefix="/i18n">
     <file alias="zh.json">i18n/zh.json</file>
     <file alias="en.json">i18n/en.json</file>
+  </qresource>
+  <qresource prefix="/themes">
+    <file alias="mocha.json">themes/mocha.json</file>
+    <file alias="latte.json">themes/latte.json</file>
+    <file alias="dracula.json">themes/dracula.json</file>
+    <file alias="nord.json">themes/nord.json</file>
   </qresource>
 </RCC>

@@ -1,0 +1,15 @@
+{
+    "meta": { "code": "mocha", "name": "Dark (Catppuccin Mocha)" },
+    "colors": {
+        "bg": "#1e1e2e",
+        "surface": "#313244",
+        "border": "#45475a",
+        "text": "#cdd6f4",
+        "overlay": "#6c7086",
+        "accent": "#89b4fa",
+        "hoverBg": "#181825",
+        "highlight": "#f5e0dc",
+        "accentHover": "#7aa2f7",
+        "danger": "#f38ba8"
+    }
+}

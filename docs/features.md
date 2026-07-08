@@ -21,6 +21,7 @@
 | 系统托盘 | 启动后常驻托盘放大镜图标（QPainter 绘制，Catppuccin blue）；双击托盘图标等同全局热键（toggle 显示/隐藏）；右键菜单：显示/隐藏、退出 |
 | 设置界面 | `/settings` 命令打开；Catppuccin 风格自定义对话框（可拖拽标题栏，Esc 关闭，内容区超出屏幕高度时可滚动）；每次显示都会用当前设置刷新表单，保证"取消"不残留未保存的编辑。配置持久化到 `settings.json`：① 全局热键（`HotkeyEdit` 低级钩子录制，支持 Alt+Space 等系统保留键）；② 开机自启动（Windows 写入 `HKCU\...\Run`）；③ 插件启用/禁用；④ 网页搜索引擎优先级（列表 + 上下移动排序 + 添加/移除自定义引擎，内置引擎不可删除）；⑤ 文件搜索目录列表（添加/移除，默认桌面/文档/下载/图片）；⑥ 一键重置为出厂默认（仅重置表单，需再点保存才落盘） |
 | 多语言 (i18n) | 内置简体中文/English，`/settings` 页语言下拉框切换，需重启生效（不支持热切换）。语言包是 datadir `i18n/<code>.json` 文件，内置语言首次运行时从 Qt 资源落盘，用户可直接编辑或复制出自定义语言；详见 [AGENTS.md「自定义语言」](../AGENTS.md#自定义语言) |
+| 多主题 (theme) | 内置 4 套主题（Dark/Catppuccin Mocha、Light/Catppuccin Latte、Dracula、Nord），`/settings` 页主题下拉框切换，需重启生效（与语言切换共用同一重启提示，不支持热切换）。主题包是 datadir `themes/<code>.json` 文件，内置主题首次运行时从 Qt 资源落盘，用户可直接编辑或新增自定义主题；详见 [AGENTS.md「自定义主题」](../AGENTS.md#自定义主题) |
 
 ## 待实现
 

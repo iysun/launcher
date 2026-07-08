@@ -37,6 +37,7 @@ private:
     AppSettings       *m_settings;
     HotkeyEdit        *m_hotkeyEdit;
     QComboBox         *m_languageCombo = nullptr;
+    QComboBox         *m_themeCombo    = nullptr;
     QCheckBox         *m_autostartCheck;
     QList<QCheckBox *> m_pluginChecks;
     QList<QString>     m_pluginNames;

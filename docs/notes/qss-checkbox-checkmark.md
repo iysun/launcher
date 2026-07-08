@@ -26,7 +26,14 @@ Qt 的 `QStyleSheetStyle` 就整体接管了这个子控件的绘制，**不会�
 
 ## 正确做法
 
-给 `:checked` 态的 `image:` 指定一个真实的图标资源（`image: url(:/icons/check.png)`），
-不要指望任何 QSS 伪元素/CSS 属性能画出这个对勾。图标由 `tools/gen_check_icon.py`
-生成（Pillow 画一个小对勾，输出到 `resources/icons/check.png`），改颜色/尺寸就重新
-跑一遍脚本，不要手工改产物。PNG 是 Qt 内置支持的格式，不需要额外链接 QtSvg 模块。
+给 `:checked` 态的 `image:` 指定一个真实的图标资源，不要指望任何 QSS 伪元素/CSS 属性
+能画出这个对勾。PNG 是 Qt 内置支持的格式，不需要额外链接 QtSvg 模块。
+
+主题变成数据驱动、用户可任意新增（见 [AGENTS.md「自定义主题」](../../AGENTS.md)）之后，
+没法再像早期那样为单一固定配色预烘焙一份 PNG 编进 `.qrc`。现在改为 `Theme::init()`
+里的 `Theme::generateIcons()` 按当前主题色用 `QPainter` 现画，落盘到
+`<datadir>/theme-cache/{check,chevron-down}.png`，QSS 用 `Theme::checkIconPath()` /
+`Theme::chevronIconPath()` 返回的磁盘绝对路径通过 `image: url(...)` 引用——Qt 样式表
+的 `url()` 支持磁盘绝对路径，不要求一定是 qrc 资源。同一颗心得依旧适用：下拉箭头
+（`QComboBox::down-arrow`）在自定义了 combo box 背景/边框后同样会被 Qt 接管绘制，
+不会回退到原生箭头，也需要一张真实图片。

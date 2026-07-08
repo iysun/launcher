@@ -1,5 +1,6 @@
 #include "helpdialog.h"
 #include "core/i18n.h"
+#include "core/theme.h"
 #include <QFrame>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -10,19 +11,11 @@
 #include <QScreen>
 #include <QVBoxLayout>
 
-// ── 颜色常量（Catppuccin Mocha，与 SettingsDialog 一致） ─────────
-static const char *kBg       = "#1e1e2e";
-static const char *kSurface0 = "#313244";
-static const char *kOverlay0 = "#6c7086";
-static const char *kText     = "#cdd6f4";
-static const char *kBlue     = "#89b4fa";
-static const char *kBorder   = "#45475a";
-
 // ── 辅助：小节标题 ────────────────────────────────────────────────
 static QLabel *sectionLabel(const QString &text) {
     auto *lbl = new QLabel(text);
     lbl->setStyleSheet(
-        QString("color: %1; font-size: 11px; font-weight: bold;").arg(kOverlay0));
+        QString("color: %1; font-size: 11px; font-weight: bold;").arg(Theme::c("overlay")));
     return lbl;
 }
 
@@ -35,10 +28,10 @@ static QWidget *row(const QString &key, const QString &desc, QWidget *parent) {
 
     auto *keyLbl = new QLabel(key, w);
     keyLbl->setFixedWidth(130);
-    keyLbl->setStyleSheet(QString("color: %1; font-size: 13px;").arg(kBlue));
+    keyLbl->setStyleSheet(QString("color: %1; font-size: 13px;").arg(Theme::c("accent")));
 
     auto *descLbl = new QLabel(desc, w);
-    descLbl->setStyleSheet(QString("color: %1; font-size: 13px;").arg(kText));
+    descLbl->setStyleSheet(QString("color: %1; font-size: 13px;").arg(Theme::c("text")));
     descLbl->setWordWrap(true);
 
     hl->addWidget(keyLbl);
@@ -50,7 +43,7 @@ static QFrame *separator(QWidget *parent) {
     auto *sep = new QFrame(parent);
     sep->setFrameShape(QFrame::HLine);
     sep->setStyleSheet(
-        QString("background: %1; border: none; max-height: 1px;").arg(kBorder));
+        QString("background: %1; border: none; max-height: 1px;").arg(Theme::c("border")));
     return sep;
 }
 
@@ -84,7 +77,7 @@ void HelpDialog::buildLayout() {
             border-radius: 10px;
         }
     )")
-                            .arg(kBg, kBorder));
+                            .arg(Theme::c("bg"), Theme::c("border")));
     root->addWidget(card);
 
     auto *outer = new QVBoxLayout(card);
@@ -100,7 +93,7 @@ void HelpDialog::buildLayout() {
 
     auto *titleLbl = new QLabel(I18n::t("help.title"), titleBar);
     titleLbl->setStyleSheet(
-        QString("color: %1; font-size: 15px; font-weight: bold;").arg(kText));
+        QString("color: %1; font-size: 15px; font-weight: bold;").arg(Theme::c("text")));
     tl->addWidget(titleLbl);
     tl->addStretch();
 
@@ -110,7 +103,7 @@ void HelpDialog::buildLayout() {
         QPushButton { background: transparent; color: %1; font-size: 18px; border: none; border-radius: 4px; }
         QPushButton:hover { background: %2; }
     )")
-                                .arg(kOverlay0, kSurface0));
+                                .arg(Theme::c("overlay"), Theme::c("surface")));
     tl->addWidget(closeBtn);
     connect(closeBtn, &QPushButton::clicked, this, &HelpDialog::hide);
     outer->addWidget(titleBar);
@@ -162,9 +155,9 @@ void HelpDialog::buildLayout() {
     closeBtn2->setFixedWidth(80);
     closeBtn2->setStyleSheet(QString(R"(
         QPushButton { background: %1; color: %2; font-size: 13px; border: none; border-radius: 6px; padding: 6px 0; }
-        QPushButton:hover { background: #45475a; }
+        QPushButton:hover { background: %3; }
     )")
-                                 .arg(kSurface0, kText));
+                                 .arg(Theme::c("surface"), Theme::c("text"), Theme::c("border")));
     fl->addWidget(closeBtn2);
     connect(closeBtn2, &QPushButton::clicked, this, &HelpDialog::hide);
 
