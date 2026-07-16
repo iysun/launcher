@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Launcher VERSION 0.1.0 LANGUAGES CXX)
+project(Launcher VERSION 0.1.0 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,6 +12,18 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(Qt6 REQUIRED COMPONENTS Widgets Test Concurrent)
 
 add_subdirectory(third_party/QHotkey)
+
+# libvterm：纯 C99 终端内核（VT 解析 + 屏幕网格状态），vendored 源码，MinGW 直接编。
+# 只负责终端语义；PTY(ConPTY)/渲染(QPainter)/输入编码由本项目实现。
+file(GLOB VTERM_SRC ${CMAKE_SOURCE_DIR}/third_party/libvterm/src/*.c)
+add_library(vterm STATIC ${VTERM_SRC})
+target_include_directories(vterm
+    PUBLIC  ${CMAKE_SOURCE_DIR}/third_party/libvterm/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/third_party/libvterm/src)
+# libvterm 用了 GCC 符号可见性属性，在 PE/COFF 上不适用，静音其告警
+if(WIN32)
+    target_compile_options(vterm PRIVATE -w)
+endif()
 
 qt_add_executable(launcher WIN32
     src/main.cpp
@@ -31,15 +43,23 @@ qt_add_executable(launcher WIN32
     src/ui/settingsdialog.cpp
     src/ui/hotkeyedit.cpp
     src/ui/helpdialog.cpp
+    src/pty/conpty.cpp
+    src/pty/ptyreader.cpp
+    src/vt/terminalcore.cpp
+    src/ui/terminalview.cpp
+    src/ui/terminalwindow.cpp
     resources/resources.qrc
 )
 
 target_include_directories(launcher PRIVATE src)
-target_link_libraries(launcher PRIVATE Qt6::Widgets Qt6::Concurrent qhotkey)
+target_link_libraries(launcher PRIVATE Qt6::Widgets Qt6::Concurrent qhotkey vterm)
 
 # MinGW 不像 MSVC 自动链接 COM 库，需显式链接（IShellLink / CLSID_ShellLink）
 if(WIN32)
     target_link_libraries(launcher PRIVATE ole32 oleaut32 uuid)
+    # 解锁 ConPTY 声明：mingw-w64 把 CreatePseudoConsole/HPCON 等门控在
+    # NTDDI_VERSION >= NTDDI_WIN10_RS5 (0x0A000006, 1809)，光设 _WIN32_WINNT 不够
+    target_compile_definitions(launcher PRIVATE _WIN32_WINNT=0x0A00 NTDDI_VERSION=0x0A000006)
 endif()
 
 # ── 测试 ──────────────────────────────────────────────────────

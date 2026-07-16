@@ -1,0 +1,3 @@
+keyChar cp=120
+sinkOutput 78
+ptyWrite 78

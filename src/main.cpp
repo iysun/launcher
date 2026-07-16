@@ -7,6 +7,7 @@
 #include "plugins/fileplugin.h"
 #include "plugins/webplugin.h"
 #include "ui/settingsdialog.h"
+#include "ui/terminalwindow.h"
 #include <QApplication>
 #include <QDesktopServices>
 #include <QProcess>
@@ -43,6 +44,15 @@ int main(int argc, char *argv[]) {
         QProcess::startDetached(QApplication::applicationFilePath());
         qApp->quit();
     });
+    // "/terminal"：打开内嵌终端窗口（libvterm + ConPTY），单例复用，懒启动 shell
+    auto *terminalWin = new TerminalWindow;
+    cmd->addCommand("terminal", I18n::t("cmd.terminal"), [terminalWin] {
+        terminalWin->show();
+        terminalWin->raise();
+        terminalWin->activateWindow();
+        terminalWin->startSession();
+    });
+
     win.addPlugin(cmd);
 
     // 所有插件注册完毕后创建设置对话框（插件列表已完整）

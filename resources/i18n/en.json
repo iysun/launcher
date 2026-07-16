@@ -60,6 +60,7 @@
         "cmd.reload": "Reload app list",
         "cmd.datadir": "Open config / data directory",
         "cmd.restart": "Restart launcher",
-        "cmd.settings": "Open settings"
+        "cmd.settings": "Open settings",
+        "cmd.terminal": "Open terminal"
     }
 }
