@@ -15,3 +15,4 @@
 - [查询防抖与异步接缝](notes/query-debounce-async-seam.md) — 为何 runQuery 现在同步执行、线程化推迟到 FilePlugin 落地
 - [FilePlugin 同步遍历的访问上限兜底](notes/fileplugin-bounded-scan.md) — `@` 文件搜索为何用 kMaxVisit 封顶而非线程化
 - [Qt 样式表不支持 ::after / content](notes/qss-checkbox-checkmark.md) — 勾选框选中态对勾必须用 `image: url(...)` 提供真实图标，不能用 CSS 伪元素
+- [内嵌终端：为何用 libvterm 及集成坑](notes/embedded-terminal-libvterm.md) — 弃 ghostty 用 libvterm；CMake 须启用 C 语言否则 `.c` 被静默丢弃；ConPTY 的 NTDDI 门控；重复信号连接导致输入翻倍

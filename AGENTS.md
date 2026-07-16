@@ -171,15 +171,23 @@ src/
 │   ├── commandplugin.h / .cpp  # "/" 前缀命令插件（通用注册表，main.cpp 装配动作）
 │   ├── fileplugin.h / .cpp     # "@" 前缀文件搜索（异步，QtConcurrent）
 │   └── webplugin.h / .cpp      # "?" 前缀网页搜索（Google/Bing/Baidu/GitHub）
+├── pty/
+│   ├── conpty.h / .cpp         # Windows ConPTY 封装（起 shell、读写管道、resize、拆解）
+│   └── ptyreader.h / .cpp      # worker 线程：阻塞 ReadFile ConPTY 输出，QueuedConnection 投给 GUI 线程
+├── vt/
+│   └── terminalcore.h / .cpp   # libvterm 封装（唯一 include vterm.h）：喂字节/读单元格/键盘编码，回调转 Qt 信号
 └── ui/
     ├── resultdelegate.h / .cpp  # 结果项绘制（图标 + 两行 + 命中高亮）
     ├── settingsdialog.h / .cpp  # 设置对话框（热键/自启/插件启停，Catppuccin 风格）
     ├── hotkeyedit.h / .cpp      # 热键录制控件（WH_KEYBOARD_LL 低级钩子，支持系统保留键）
-    └── helpdialog.h / .cpp      # 帮助对话框（快捷键/前缀/命令三区，替代 QMessageBox）
+    ├── helpdialog.h / .cpp      # 帮助对话框（快捷键/前缀/命令三区，替代 QMessageBox）
+    ├── terminalview.h / .cpp    # 终端渲染 + 输入（QPainter 逐格自绘，Qt 按键→libvterm 编码）
+    └── terminalwindow.h / .cpp  # 独立终端顶层窗口（/terminal 打开），持 ConPty+PtyReader，接线信号槽
 tests/
 └── test_matcher.cpp            # Matcher 单测（Qt Test，ctest 运行）
 third_party/
-└── QHotkey/                    # Git submodule，跨平台全局热键库
+├── QHotkey/                    # Git submodule，跨平台全局热键库
+└── libvterm/                   # vendored 纯 C99 终端内核（VT 解析/屏幕状态），MinGW 直接编（CMake 需启用 C 语言）
 docs/
 ├── notes.md                    # 踩坑与注意事项（索引）
 └── features.md                 # 功能规划（索引）
