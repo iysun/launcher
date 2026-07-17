@@ -53,7 +53,8 @@ bool mapSpecial(int key, TerminalCore::SpecialKey &out) {
 
 TerminalView::TerminalView(QWidget *parent) : QWidget(parent) {
     setFocusPolicy(Qt::StrongFocus);
-    setAttribute(Qt::WA_OpaquePaintEvent); // 我们自己铺满背景，省一次系统擦除
+    setAttribute(Qt::WA_OpaquePaintEvent);    // 我们自己铺满背景，省一次系统擦除
+    setAttribute(Qt::WA_InputMethodEnabled); // 中文等 IME 输入（inputMethodEvent）
     setCursor(Qt::IBeamCursor);
 
     // 等宽字体：优先 Cascadia Mono / Consolas，兜底系统固定字体
@@ -79,7 +80,10 @@ TerminalView::TerminalView(QWidget *parent) : QWidget(parent) {
 
     connect(m_core, &TerminalCore::outputToPty, this, &TerminalView::outputToPty);
     connect(m_core, &TerminalCore::damaged, this, [this] { update(); });
-    connect(m_core, &TerminalCore::cursorMoved, this, [this] { update(); });
+    connect(m_core, &TerminalCore::cursorMoved, this, [this] {
+        updateMicroFocus(); // 通知输入法光标矩形变化（候选框跟随）
+        update();
+    });
     // 历史行数变化：上滚期间随内容平移偏移量（视口内容保持稳定），并钳制越界
     connect(m_core, &TerminalCore::scrollbackChanged, this, [this](int delta) {
         if (m_scrollOffset > 0)
@@ -345,6 +349,23 @@ void TerminalView::paintEvent(QPaintEvent *) {
         p.fillRect(cr, cur);
     }
 
+    // IME 预编辑串：画在光标处（覆盖其后格子，可接受）；候选未上屏不进 vterm 网格
+    if (!m_preedit.isEmpty() && m_scrollOffset == 0) {
+        QFontMetricsF fm(m_font);
+        const qreal   w = fm.horizontalAdvance(m_preedit);
+        const qreal   x = m_core->cursorCol() * m_cellW;
+        const qreal   y = m_core->cursorRow() * m_cellH;
+        QRectF        r(x, y, w, m_cellH);
+        QColor        bg = Theme::color("accent");
+        bg.setAlpha(60);
+        p.fillRect(r, bg);
+        QFont f = m_font;
+        f.setUnderline(true);
+        p.setFont(f);
+        p.setPen(m_defaultFg);
+        p.drawText(r, Qt::AlignLeft | Qt::AlignVCenter, m_preedit);
+    }
+
     // 回看时右侧细条位置指示（非交互，代替滚动条）
     if (m_scrollOffset > 0) {
         const qreal total   = m_core->historySize() + m_rows;
@@ -408,4 +429,47 @@ void TerminalView::keyPressEvent(QKeyEvent *e) {
         return;
     }
     QWidget::keyPressEvent(e);
+}
+
+// ── IME（中文等输入法）─────────────────────────────────────────────
+
+void TerminalView::inputMethodEvent(QInputMethodEvent *e) {
+    const QString &commit = e->commitString();
+    if (!commit.isEmpty()) {
+        scrollTo(0);
+        clearSelection();
+        for (char32_t cp : commit.toUcs4())
+            m_core->keyChar(cp, Qt::NoModifier);
+    }
+    if (m_preedit != e->preeditString()) {
+        m_preedit = e->preeditString();
+        update();
+    }
+    e->accept();
+}
+
+QVariant TerminalView::inputMethodQuery(Qt::InputMethodQuery q) const {
+    switch (q) {
+    case Qt::ImEnabled:
+        return true;
+    case Qt::ImCursorRectangle: // 候选框定位：光标所在格（回看时光标在底部之外，给底部）
+        if (m_scrollOffset == 0)
+            return QRectF(m_core->cursorCol() * m_cellW, m_core->cursorRow() * m_cellH,
+                          m_cellW, m_cellH);
+        return QRectF(0, height() - m_cellH, m_cellW, m_cellH);
+    case Qt::ImFont:
+        return m_font;
+    case Qt::ImHints:
+        return int(Qt::ImhNone);
+    default:
+        return QWidget::inputMethodQuery(q);
+    }
+}
+
+void TerminalView::focusOutEvent(QFocusEvent *e) {
+    if (!m_preedit.isEmpty()) {
+        m_preedit.clear();
+        update();
+    }
+    QWidget::focusOutEvent(e);
 }

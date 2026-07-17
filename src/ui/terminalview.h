@@ -30,6 +30,9 @@ protected:
     void mouseMoveEvent(QMouseEvent *e) override;
     void mouseReleaseEvent(QMouseEvent *e) override;
     void mouseDoubleClickEvent(QMouseEvent *e) override;
+    void inputMethodEvent(QInputMethodEvent *e) override;
+    QVariant inputMethodQuery(Qt::InputMethodQuery q) const override;
+    void focusOutEvent(QFocusEvent *e) override;
 
 private:
     // 选区端点：row 为全局行号（historyStart + 历史/屏幕序号），滚动与驱逐下稳定
@@ -66,4 +69,6 @@ private:
 
     bool   m_hasSel = false, m_selecting = false;
     SelPos m_selAnchor, m_selEnd; // 端点含入（end 指向格子本身）
+
+    QString m_preedit; // IME 预编辑串（候选未上屏），画在光标处
 };
