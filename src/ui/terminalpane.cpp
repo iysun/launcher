@@ -4,22 +4,51 @@
 #include "pty/ptyreader.h"
 #include "ui/terminalview.h"
 
-#include <QKeyEvent>
-#include <QRegion>
-#include <QResizeEvent>
+#include <QDir>
+#include <QFile>
 #include <QStandardPaths>
 #include <QVBoxLayout>
 
 namespace {
-// 选 shell：pwsh(7) > powershell(5.1) > cmd
-QString pickShell() {
-    QString pwsh = QStandardPaths::findExecutable(QStringLiteral("pwsh"));
-    if (!pwsh.isEmpty())
-        return pwsh;
-    QString ps = QStandardPaths::findExecutable(QStringLiteral("powershell"));
-    if (!ps.isEmpty())
-        return ps;
-    return QStringLiteral("cmd.exe");
+// 落盘一个 pwsh prompt 钩子脚本：每次刷新提示符时把窗口标题设为当前目录（ProviderPath），
+// 让多标签能取到"最后一层目录名"。PowerShell 的 Set-Location 不改进程 cwd，标题是唯一可靠信号。
+// 脚本包住已有 prompt（oh-my-posh 等），不破坏其渲染。返回脚本路径，失败返回空。
+QString ensureCwdTitleHook() {
+    const QString dir =
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
+        QStringLiteral("/shell");
+    QDir().mkpath(dir);
+    const QString path = dir + QStringLiteral("/pwsh-cwd-title.ps1");
+    static const char *kScript =
+        "# launcher 注入：提示符刷新时把窗口标题设为当前目录（供多标签取最后一层目录名）。\r\n"
+        "# 包住已有 prompt（如 oh-my-posh），不破坏其渲染。\r\n"
+        "$global:__lnPrevPrompt = $function:prompt\r\n"
+        "function global:prompt {\r\n"
+        "    try { $Host.UI.RawUI.WindowTitle = "
+        "$ExecutionContext.SessionState.Path.CurrentLocation.ProviderPath } catch {}\r\n"
+        "    if ($global:__lnPrevPrompt) { & $global:__lnPrevPrompt } else { "
+        "\"PS $($ExecutionContext.SessionState.Path.CurrentLocation.Path)> \" }\r\n"
+        "}\r\n";
+    QFile f(path);
+    if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        f.write(kScript);
+        f.close();
+    }
+    return QFile::exists(path) ? path : QString();
+}
+
+// shell 命令行：pwsh(7) > powershell(5.1) > cmd；pwsh/powershell 注入上面的 cwd→标题钩子。
+QString shellCommandLine() {
+    QString exe = QStandardPaths::findExecutable(QStringLiteral("pwsh"));
+    if (exe.isEmpty())
+        exe = QStandardPaths::findExecutable(QStringLiteral("powershell"));
+    if (exe.isEmpty())
+        return QStringLiteral("cmd.exe"); // cmd 无 cwd→标题钩子，标签回退 "Terminal N"
+    const QString hook = ensureCwdTitleHook();
+    if (hook.isEmpty())
+        return QString(QStringLiteral("\"%1\"")).arg(exe);
+    // 用户 profile（含 oh-my-posh）先于 -File 加载，故钩子能包住其 prompt
+    return QString(QStringLiteral("\"%1\" -NoExit -File \"%2\"")).arg(exe, hook);
 }
 } // namespace
 
@@ -43,10 +72,6 @@ TerminalPane::TerminalPane(QWidget *parent)
         m_pty->resize(static_cast<short>(c), static_cast<short>(r));
     });
 
-    // 退出模式键（Ctrl+`）须抢在 TerminalView 把它当普通按键 raw 送 PTY 之前拦截，
-    // 故装在 m_view 上；Esc 等其余按键一律放行给终端（vim/htop 的命门）。
-    m_view->installEventFilter(this);
-
     setStyleSheet(QString("QWidget { background: %1; }").arg(Theme::c("bg")));
 }
 
@@ -59,7 +84,8 @@ void TerminalPane::startSession() {
     const int rows = m_view->gridRows();
     const int cols = m_view->gridCols();
 
-    if (!m_pty->start(pickShell(), static_cast<short>(cols), static_cast<short>(rows)))
+    if (!m_pty->start(shellCommandLine(), static_cast<short>(cols),
+                      static_cast<short>(rows)))
         return;
 
 #ifdef Q_OS_WIN
@@ -88,46 +114,6 @@ void TerminalPane::runCommand(const QString &cmd) {
 void TerminalPane::focusTerminal() {
     if (m_view)
         m_view->setFocus();
-}
-
-void TerminalPane::setCornerRadius(int r) {
-    m_cornerRadius = r;
-    applyCornerMask();
-}
-
-// TerminalView 是不透明的（逐格填满），会盖掉宿主卡片的圆角。这里用圆角 QRegion
-// 遮罩把 pane（含子控件）裁成圆角，与卡片圆角对齐。r==0 时清除遮罩（原生方框）。
-void TerminalPane::applyCornerMask() {
-    if (m_cornerRadius <= 0 || width() <= 0 || height() <= 0) {
-        clearMask();
-        return;
-    }
-    const int  d = m_cornerRadius * 2;
-    const QRect r = rect();
-    QRegion    reg(r.adjusted(m_cornerRadius, 0, -m_cornerRadius, 0)); // 中间横条
-    reg += QRegion(r.adjusted(0, m_cornerRadius, 0, -m_cornerRadius)); // 中间竖条
-    reg += QRegion(r.left(), r.top(), d, d, QRegion::Ellipse);                 // 左上
-    reg += QRegion(r.right() - d + 1, r.top(), d, d, QRegion::Ellipse);        // 右上
-    reg += QRegion(r.left(), r.bottom() - d + 1, d, d, QRegion::Ellipse);      // 左下
-    reg += QRegion(r.right() - d + 1, r.bottom() - d + 1, d, d, QRegion::Ellipse); // 右下
-    setMask(reg);
-}
-
-void TerminalPane::resizeEvent(QResizeEvent *e) {
-    QWidget::resizeEvent(e);
-    applyCornerMask(); // 尺寸变了圆角遮罩要跟着重算，否则裁剪错位
-}
-
-bool TerminalPane::eventFilter(QObject *obj, QEvent *e) {
-    if (obj == m_view && e->type() == QEvent::KeyPress) {
-        auto *key = static_cast<QKeyEvent *>(e);
-        if ((key->modifiers() & Qt::ControlModifier) &&
-            key->key() == Qt::Key_QuoteLeft) { // Ctrl+` 退出终端模式
-            emit exitRequested();
-            return true; // 吞掉，不下送 PTY
-        }
-    }
-    return QWidget::eventFilter(obj, e);
 }
 
 void TerminalPane::onSessionEnded() {

@@ -4,7 +4,7 @@
 #include "core/theme.h"
 #include "core/usagestore.h"
 #include "ui/resultdelegate.h"
-#include "ui/terminalpane.h"
+#include "ui/terminaltabs.h"
 #include <algorithm>
 #include <QApplication>
 #include <QCursor>
@@ -221,14 +221,14 @@ void MainWindow::changeEvent(QEvent *e) {
 // ── 内联终端模式 ──────────────────────────────────────────────
 
 void MainWindow::enterTerminal(const QString &cmd) {
-    if (!m_term) { // 懒建：首次进入才创建 pane 并挂进卡片
-        m_term = new TerminalPane(m_card);
+    if (!m_term) { // 懒建：首次进入才创建标签容器并挂进卡片
+        m_term = new TerminalTabs(m_card);
         m_term->setCornerRadius(10); // 与卡片 border-radius 对齐，避免不透明终端糊掉圆角
         m_cardLayout->addWidget(m_term);
         m_term->hide();
-        // 用户在终端内按 Ctrl+` → 切回搜索；shell 退出 → 也切回搜索
-        connect(m_term, &TerminalPane::exitRequested, this, &MainWindow::exitTerminal);
-        connect(m_term, &TerminalPane::sessionEnded, this, &MainWindow::exitTerminal);
+        // 用户在终端内按 Ctrl+` → 切回搜索；关掉最后一个标签 → 也切回搜索
+        connect(m_term, &TerminalTabs::exitRequested, this, &MainWindow::exitTerminal);
+        connect(m_term, &TerminalTabs::lastTabClosed, this, &MainWindow::exitTerminal);
     }
 
     m_mode = Mode::Terminal;

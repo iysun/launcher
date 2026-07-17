@@ -13,7 +13,7 @@ class QSystemTrayIcon;
 class QTimer;
 class QVBoxLayout;
 class ResultDelegate;
-class TerminalPane;
+class TerminalTabs;
 class UsageStore;
 
 class MainWindow : public QWidget {
@@ -55,7 +55,7 @@ private:
 
     QFrame          *m_card       = nullptr; // 圆角卡片容器（终端模式改其固定宽）
     QVBoxLayout     *m_cardLayout = nullptr; // 卡片内布局（终端 pane 懒挂于此）
-    TerminalPane    *m_term       = nullptr; // 内联终端（懒建，跨模式切换后台留存）
+    TerminalTabs    *m_term       = nullptr; // 内联终端多标签（懒建，跨模式切换后台留存）
     Mode             m_mode       = Mode::Launch;
 
     QLineEdit       *m_search;
