@@ -88,3 +88,13 @@ qt_add_executable(core_test
 target_include_directories(core_test PRIVATE src)
 target_link_libraries(core_test PRIVATE Qt6::Gui Qt6::Test)
 add_test(NAME core_test COMMAND core_test)
+
+# TerminalCore scrollback 单测：喂字节流断言历史缓冲，纯逻辑无窗口（guiless）。
+# QColor 需要 Qt6::Gui 的头与符号，但不需要 QGuiApplication 实例。
+qt_add_executable(vt_test
+    tests/test_vt.cpp
+    src/vt/terminalcore.cpp
+)
+target_include_directories(vt_test PRIVATE src)
+target_link_libraries(vt_test PRIVATE Qt6::Gui Qt6::Test vterm)
+add_test(NAME vt_test COMMAND vt_test)

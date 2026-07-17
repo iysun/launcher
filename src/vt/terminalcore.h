@@ -3,6 +3,7 @@
 #include <QColor>
 #include <QObject>
 #include <QString>
+#include <memory>
 
 struct VTerm;       // 前置声明，避免在头文件泄漏 libvterm
 struct VTermScreen; // （实际类型是 typedef struct，.cpp 里 include vterm.h）
@@ -40,6 +41,12 @@ public:
     int  rows() const { return m_rows; }
     int  cols() const { return m_cols; }
 
+    // ── scrollback（滚动回看）：历史行存储在 .cpp 内（含 libvterm 类型），只暴露快照
+    int    historySize() const;                       // 当前缓存的历史行数
+    qint64 historyStart() const;                      // 已因容量上限驱逐的行数（全局行号基准）
+    Cell   historyCellAt(int histRow, int col) const; // histRow ∈ [0, historySize)，0 = 最旧
+    bool   altScreen() const { return m_altScreen; }  // 备用屏（vim/htop）下无 scrollback
+
     int  cursorRow() const { return m_cursorRow; }
     int  cursorCol() const { return m_cursorCol; }
     bool cursorVisible() const { return m_cursorVisible; }
@@ -54,6 +61,10 @@ public:
     void sinkCursor(int row, int col, bool visible);
     void sinkBell();
     void sinkTitleFragment(const char *s, int len, bool initial, bool final);
+    void sinkPushLine(int cols, const void *cells); // cells: const VTermScreenCell*
+    int  sinkPopLine(int cols, void *cells);        // cells: VTermScreenCell*（回填）
+    void sinkSbClear();
+    void sinkAltScreen(bool on);
 
 signals:
     void outputToPty(const QByteArray &bytes);          // 键盘编码 / 查询响应 → 写回 PTY
@@ -61,12 +72,17 @@ signals:
     void cursorMoved(int row, int col, bool visible);
     void bell();
     void titleChanged(const QString &title);
+    void scrollbackChanged(int delta); // 历史行数变化：+1 push / -1 pop / -n clear
 
 private:
+    struct Scrollback; // 定义在 .cpp（内含 VTermScreenCell，不泄漏到头文件）
+
     VTerm       *m_vt     = nullptr;
     VTermScreen *m_screen = nullptr;
     int          m_rows = 0, m_cols = 0;
     int          m_cursorRow = 0, m_cursorCol = 0;
     bool         m_cursorVisible = true;
+    bool         m_altScreen = false;
     QString      m_titleBuf;
+    std::unique_ptr<Scrollback> m_sb;
 };

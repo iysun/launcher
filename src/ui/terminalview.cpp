@@ -6,6 +6,8 @@
 #include <QKeyEvent>
 #include <QPainter>
 #include <QResizeEvent>
+#include <QWheelEvent>
+#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -74,6 +76,12 @@ TerminalView::TerminalView(QWidget *parent) : QWidget(parent) {
     connect(m_core, &TerminalCore::outputToPty, this, &TerminalView::outputToPty);
     connect(m_core, &TerminalCore::damaged, this, [this] { update(); });
     connect(m_core, &TerminalCore::cursorMoved, this, [this] { update(); });
+    // 历史行数变化：上滚期间随内容平移偏移量（视口内容保持稳定），并钳制越界
+    connect(m_core, &TerminalCore::scrollbackChanged, this, [this](int delta) {
+        if (m_scrollOffset > 0)
+            m_scrollOffset = std::clamp(m_scrollOffset + delta, 0, m_core->historySize());
+        update();
+    });
 }
 
 void TerminalView::onBytes(const QByteArray &chunk) {
@@ -96,13 +104,49 @@ void TerminalView::resizeEvent(QResizeEvent *e) {
     recomputeGrid();
 }
 
+TerminalCore::Cell TerminalView::fetchCell(int viewRow, int col) const {
+    // 全序列 = 历史行 [0, hist) + 屏幕行 [hist, hist+m_rows)；偏移从底端往回数
+    const int seq = m_core->historySize() - m_scrollOffset + viewRow;
+    if (seq < 0)
+        return {};
+    if (seq < m_core->historySize())
+        return m_core->historyCellAt(seq, col);
+    return m_core->cellAt(seq - m_core->historySize(), col);
+}
+
+void TerminalView::scrollTo(int offset) {
+    const int clamped = std::clamp(offset, 0, m_core->historySize());
+    if (clamped == m_scrollOffset)
+        return;
+    m_scrollOffset = clamped;
+    update();
+}
+
+void TerminalView::wheelEvent(QWheelEvent *e) {
+    const int steps = e->angleDelta().y() / 120; // 正 = 向上
+    if (steps == 0 || !m_core) {
+        e->ignore();
+        return;
+    }
+    if (m_core->altScreen()) {
+        // 备用屏（vim/less/htop）无 scrollback：滚轮转发为方向键，3 行/格
+        const auto key = steps > 0 ? TerminalCore::SpecialKey::Up
+                                   : TerminalCore::SpecialKey::Down;
+        for (int i = 0; i < qAbs(steps) * 3; ++i)
+            m_core->keySpecial(key, Qt::NoModifier);
+    } else {
+        scrollTo(m_scrollOffset + steps * 3);
+    }
+    e->accept();
+}
+
 void TerminalView::paintEvent(QPaintEvent *) {
     QPainter p(this);
     p.fillRect(rect(), m_defaultBg);
 
     for (int row = 0; row < m_rows; ++row) {
         for (int col = 0; col < m_cols;) {
-            TerminalCore::Cell cell = m_core->cellAt(row, col);
+            TerminalCore::Cell cell = fetchCell(row, col);
             int    w  = cell.width > 1 ? 2 : 1;
             qreal  x  = col * m_cellW;
             qreal  y  = row * m_cellH;
@@ -129,14 +173,25 @@ void TerminalView::paintEvent(QPaintEvent *) {
         }
     }
 
-    // 光标（块状，MVP）
-    if (m_core->cursorVisible()) {
+    // 光标（块状，MVP）；回看历史时光标不在视口内，不画
+    if (m_scrollOffset == 0 && m_core->cursorVisible()) {
         qreal x = m_core->cursorCol() * m_cellW;
         qreal y = m_core->cursorRow() * m_cellH;
         QRectF cr(x, y, m_cellW, m_cellH);
         QColor cur = Theme::color("accent");
         cur.setAlpha(140);
         p.fillRect(cr, cur);
+    }
+
+    // 回看时右侧细条位置指示（非交互，代替滚动条）
+    if (m_scrollOffset > 0) {
+        const qreal total   = m_core->historySize() + m_rows;
+        const qreal barH    = std::max<qreal>(20.0, height() * (m_rows / total));
+        const qreal topFrac = (m_core->historySize() - m_scrollOffset) / total;
+        const qreal top     = std::min<qreal>(height() * topFrac, height() - barH);
+        QColor      c       = Theme::color("accent");
+        c.setAlpha(120);
+        p.fillRect(QRectF(width() - 5, top, 3, barH), c);
     }
 }
 
@@ -149,6 +204,7 @@ void TerminalView::keyPressEvent(QKeyEvent *e) {
 
     TerminalCore::SpecialKey sk;
     if (mapSpecial(e->key(), sk)) {
+        scrollTo(0); // 写 PTY 的按键先贴底（经典终端行为）
         m_core->keySpecial(sk, mods);
         e->accept();
         return;
@@ -156,6 +212,7 @@ void TerminalView::keyPressEvent(QKeyEvent *e) {
 
     // Ctrl+字母：传基字符 + CTRL，让 libvterm 生成控制字节（Ctrl+C=0x03 等）
     if ((mods & Qt::ControlModifier) && e->key() >= Qt::Key_A && e->key() <= Qt::Key_Z) {
+        scrollTo(0);
         m_core->keyChar('a' + (e->key() - Qt::Key_A), mods);
         e->accept();
         return;
@@ -163,6 +220,7 @@ void TerminalView::keyPressEvent(QKeyEvent *e) {
 
     const QString t = e->text();
     if (!t.isEmpty()) {
+        scrollTo(0);
         // 可打印字符已含 Shift 效果，去掉 SHIFT 修饰避免二次处理
         Qt::KeyboardModifiers cm = mods & ~Qt::ShiftModifier;
         for (char32_t cp : t.toUcs4())

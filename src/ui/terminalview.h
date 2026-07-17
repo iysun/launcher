@@ -25,13 +25,19 @@ protected:
     void paintEvent(QPaintEvent *e) override;
     void keyPressEvent(QKeyEvent *e) override;
     void resizeEvent(QResizeEvent *e) override;
+    void wheelEvent(QWheelEvent *e) override;
 
 private:
-    void   recomputeGrid();
+    void recomputeGrid();
+    // 视口取格：viewRow 0..m_rows-1，按 m_scrollOffset 分派历史行 / 屏幕行
+    TerminalCore::Cell fetchCell(int viewRow, int col) const;
+    void               scrollTo(int offset); // 钳制 [0, historySize] 后重绘
+
     QColor m_defaultFg, m_defaultBg;
 
     TerminalCore *m_core = nullptr;
     QFont         m_font;
     qreal         m_cellW = 8, m_cellH = 16;
     int           m_rows = 24, m_cols = 80;
+    int           m_scrollOffset = 0; // 0 = 贴底；单位 = 距底行数
 };
