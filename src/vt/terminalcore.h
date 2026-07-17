@@ -36,6 +36,7 @@ public:
     void setSize(int rows, int cols);   // vterm_set_size
     void keyChar(uint32_t codepoint, Qt::KeyboardModifiers mods);
     void keySpecial(SpecialKey key, Qt::KeyboardModifiers mods);
+    void pasteText(const QString &text); // bracketed paste（应用开启该模式时自动包裹）
 
     Cell cellAt(int row, int col) const; // vterm_screen_get_cell + 颜色转 RGB
     int  rows() const { return m_rows; }

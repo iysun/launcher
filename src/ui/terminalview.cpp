@@ -1,9 +1,12 @@
 #include "terminalview.h"
 #include "core/theme.h"
 
+#include <QClipboard>
 #include <QFontDatabase>
 #include <QFontMetricsF>
+#include <QGuiApplication>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QResizeEvent>
 #include <QWheelEvent>
@@ -51,6 +54,7 @@ bool mapSpecial(int key, TerminalCore::SpecialKey &out) {
 TerminalView::TerminalView(QWidget *parent) : QWidget(parent) {
     setFocusPolicy(Qt::StrongFocus);
     setAttribute(Qt::WA_OpaquePaintEvent); // 我们自己铺满背景，省一次系统擦除
+    setCursor(Qt::IBeamCursor);
 
     // 等宽字体：优先 Cascadia Mono / Consolas，兜底系统固定字体
     m_font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
@@ -122,6 +126,158 @@ void TerminalView::scrollTo(int offset) {
     update();
 }
 
+// ── 选区与复制粘贴 ──────────────────────────────────────────────────
+
+qint64 TerminalView::absRowOfViewRow(int viewRow) const {
+    // 全局行号 = 驱逐计数 + 本地序号（历史 [0,hist) + 屏幕 [hist,hist+rows)）
+    return m_core->historyStart() + m_core->historySize() - m_scrollOffset + viewRow;
+}
+
+TerminalView::SelPos TerminalView::posFromPixel(const QPointF &p) const {
+    const int viewRow = std::clamp(int(p.y() / m_cellH), 0, m_rows - 1);
+    const int col     = std::clamp(int(p.x() / m_cellW), 0, m_cols - 1);
+    return {absRowOfViewRow(viewRow), col};
+}
+
+TerminalCore::Cell TerminalView::cellAtAbs(qint64 absRow, int col) const {
+    const qint64 seq = absRow - m_core->historyStart(); // 本地序号
+    if (seq < 0)
+        return {};
+    if (seq < m_core->historySize())
+        return m_core->historyCellAt(static_cast<int>(seq), col);
+    const qint64 screenRow = seq - m_core->historySize();
+    if (screenRow >= m_core->rows())
+        return {};
+    return m_core->cellAt(static_cast<int>(screenRow), col);
+}
+
+bool TerminalView::selectionContains(qint64 absRow, int col) const {
+    if (!m_hasSel)
+        return false;
+    SelPos a = m_selAnchor, b = m_selEnd;
+    if (b < a)
+        std::swap(a, b);
+    if (absRow < a.row || absRow > b.row)
+        return false;
+    if (absRow == a.row && col < a.col)
+        return false;
+    if (absRow == b.row && col > b.col)
+        return false;
+    return true;
+}
+
+QString TerminalView::selectedText() const {
+    if (!m_hasSel)
+        return {};
+    SelPos a = m_selAnchor, b = m_selEnd;
+    if (b < a)
+        std::swap(a, b);
+    QStringList lines;
+    for (qint64 row = a.row; row <= b.row; ++row) {
+        const int cFrom = (row == a.row) ? a.col : 0;
+        const int cTo   = (row == b.row) ? b.col : m_cols - 1;
+        QString   line;
+        for (int col = cFrom; col <= cTo;) {
+            TerminalCore::Cell cell = cellAtAbs(row, col);
+            line += cell.text.isEmpty() ? QStringLiteral(" ") : cell.text;
+            col += cell.width > 1 ? 2 : 1; // 宽字符跳过延续格
+        }
+        while (line.endsWith(QLatin1Char(' ')))
+            line.chop(1); // 行尾空白裁剪
+        lines << line;
+    }
+    return lines.join(QLatin1Char('\n'));
+}
+
+void TerminalView::clearSelection() {
+    m_selecting = false;
+    if (m_hasSel) {
+        m_hasSel = false;
+        update();
+    }
+}
+
+void TerminalView::copySelection() {
+    const QString t = selectedText();
+    if (!t.isEmpty())
+        QGuiApplication::clipboard()->setText(t);
+}
+
+void TerminalView::pasteClipboard() {
+    const QString t = QGuiApplication::clipboard()->text();
+    if (t.isEmpty())
+        return;
+    clearSelection();
+    scrollTo(0);
+    m_core->pasteText(t); // 编码经 outputToPty 信号写回 PTY
+}
+
+void TerminalView::mousePressEvent(QMouseEvent *e) {
+    if (e->button() == Qt::LeftButton) {
+        clearSelection();
+        m_selAnchor = m_selEnd = posFromPixel(e->position());
+        m_selecting = true;
+        e->accept();
+        return;
+    }
+    if (e->button() == Qt::RightButton) { // 右键 = 粘贴（Windows 终端惯例）
+        pasteClipboard();
+        e->accept();
+        return;
+    }
+    QWidget::mousePressEvent(e);
+}
+
+void TerminalView::mouseMoveEvent(QMouseEvent *e) {
+    if (m_selecting) {
+        const SelPos pos = posFromPixel(e->position());
+        if (!(pos == m_selEnd)) {
+            m_selEnd = pos;
+            m_hasSel = !(m_selAnchor == m_selEnd);
+            update();
+        }
+        e->accept();
+        return;
+    }
+    QWidget::mouseMoveEvent(e);
+}
+
+void TerminalView::mouseReleaseEvent(QMouseEvent *e) {
+    if (e->button() == Qt::LeftButton && m_selecting) {
+        m_selecting = false;
+        e->accept();
+        return;
+    }
+    QWidget::mouseReleaseEvent(e);
+}
+
+void TerminalView::mouseDoubleClickEvent(QMouseEvent *e) {
+    if (e->button() != Qt::LeftButton) {
+        QWidget::mouseDoubleClickEvent(e);
+        return;
+    }
+    // 双击选词：以点击格为中心向两侧扩展非空白格
+    const SelPos hit     = posFromPixel(e->position());
+    auto         isBlank = [this, &hit](int col) {
+        const QString t = cellAtAbs(hit.row, col).text;
+        return t.isEmpty() || t == QStringLiteral(" ");
+    };
+    if (isBlank(hit.col)) {
+        e->accept();
+        return;
+    }
+    int from = hit.col, to = hit.col;
+    while (from > 0 && !isBlank(from - 1))
+        --from;
+    while (to < m_cols - 1 && !isBlank(to + 1))
+        ++to;
+    m_selAnchor = {hit.row, from};
+    m_selEnd    = {hit.row, to};
+    m_hasSel    = true;
+    update();
+    e->accept();
+}
+
 void TerminalView::wheelEvent(QWheelEvent *e) {
     const int steps = e->angleDelta().y() / 120; // 正 = 向上
     if (steps == 0 || !m_core) {
@@ -144,7 +300,11 @@ void TerminalView::paintEvent(QPaintEvent *) {
     QPainter p(this);
     p.fillRect(rect(), m_defaultBg);
 
+    QColor selBg = Theme::color("accent");
+    selBg.setAlpha(70);
+
     for (int row = 0; row < m_rows; ++row) {
+        const qint64 absRow = absRowOfViewRow(row);
         for (int col = 0; col < m_cols;) {
             TerminalCore::Cell cell = fetchCell(row, col);
             int    w  = cell.width > 1 ? 2 : 1;
@@ -169,6 +329,8 @@ void TerminalView::paintEvent(QPaintEvent *) {
                 p.setPen(fg);
                 p.drawText(r, Qt::AlignLeft | Qt::AlignVCenter, cell.text);
             }
+            if (m_hasSel && selectionContains(absRow, col))
+                p.fillRect(r, selBg); // 选区半透明覆盖（文字之上，轻微染色可接受）
             col += w;
         }
     }
@@ -202,9 +364,24 @@ void TerminalView::keyPressEvent(QKeyEvent *e) {
     }
     Qt::KeyboardModifiers mods = e->modifiers();
 
+    // 复制/粘贴快捷键：须在 Ctrl+字母 分支之前拦截，否则被编码成控制字节吞掉
+    if ((mods & Qt::ControlModifier) && (mods & Qt::ShiftModifier)) {
+        if (e->key() == Qt::Key_C && m_hasSel) { // 无选区时放行（仍作 SIGINT）
+            copySelection();
+            e->accept();
+            return;
+        }
+        if (e->key() == Qt::Key_V) {
+            pasteClipboard();
+            e->accept();
+            return;
+        }
+    }
+
     TerminalCore::SpecialKey sk;
     if (mapSpecial(e->key(), sk)) {
         scrollTo(0); // 写 PTY 的按键先贴底（经典终端行为）
+        clearSelection();
         m_core->keySpecial(sk, mods);
         e->accept();
         return;
@@ -213,6 +390,7 @@ void TerminalView::keyPressEvent(QKeyEvent *e) {
     // Ctrl+字母：传基字符 + CTRL，让 libvterm 生成控制字节（Ctrl+C=0x03 等）
     if ((mods & Qt::ControlModifier) && e->key() >= Qt::Key_A && e->key() <= Qt::Key_Z) {
         scrollTo(0);
+        clearSelection();
         m_core->keyChar('a' + (e->key() - Qt::Key_A), mods);
         e->accept();
         return;
@@ -221,6 +399,7 @@ void TerminalView::keyPressEvent(QKeyEvent *e) {
     const QString t = e->text();
     if (!t.isEmpty()) {
         scrollTo(0);
+        clearSelection();
         // 可打印字符已含 Shift 效果，去掉 SHIFT 修饰避免二次处理
         Qt::KeyboardModifiers cm = mods & ~Qt::ShiftModifier;
         for (char32_t cp : t.toUcs4())

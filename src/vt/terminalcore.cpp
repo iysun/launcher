@@ -195,6 +195,18 @@ void TerminalCore::keySpecial(SpecialKey key, Qt::KeyboardModifiers mods) {
         vterm_keyboard_key(m_vt, toVtKey(key), toVtMod(mods));
 }
 
+void TerminalCore::pasteText(const QString &text) {
+    if (!m_vt || text.isEmpty())
+        return;
+    QString t = text;
+    t.replace(QStringLiteral("\r\n"), QStringLiteral("\r"))
+        .replace(QLatin1Char('\n'), QLatin1Char('\r')); // 终端换行统一为 CR
+    vterm_keyboard_start_paste(m_vt); // 应用开了 bracketed paste 模式则自动包裹
+    for (char32_t cp : t.toUcs4())
+        vterm_keyboard_unichar(m_vt, cp, VTERM_MOD_NONE);
+    vterm_keyboard_end_paste(m_vt);
+}
+
 TerminalCore::Cell TerminalCore::cellAt(int row, int col) const {
     if (!m_screen)
         return {};
