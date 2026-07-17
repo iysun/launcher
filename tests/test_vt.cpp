@@ -34,6 +34,9 @@ private slots:
     void historyIsCappedAndEvicts();
     void altScreenPropTracked();
     void altScreenDoesNotPush();
+    void mouseModeTracked();
+    void mouseReportEmitsBytes();
+    void ansiPaletteRecolors();
 };
 
 void TestVt::emptyHistoryInitially() {
@@ -87,6 +90,45 @@ void TestVt::altScreenDoesNotPush() {
     core.feed(numberedLines(0, 20)); // 备用屏滚动不进历史
     QCOMPARE(core.historySize(), before);
     core.feed("\x1b[?1049l");
+}
+
+void TestVt::mouseModeTracked() {
+    TerminalCore core(5, 20);
+    QVERIFY(core.mouseMode() == TerminalCore::MouseMode::None);
+    QSignalSpy spy(&core, &TerminalCore::mouseModeChanged);
+
+    core.feed("\x1b[?1000h"); // 启用点击上报（VT200 mouse）
+    QVERIFY(core.mouseMode() == TerminalCore::MouseMode::Click);
+    QCOMPARE(spy.count(), 1);
+
+    core.feed("\x1b[?1003h"); // 任意移动上报
+    QVERIFY(core.mouseMode() == TerminalCore::MouseMode::Move);
+
+    core.feed("\x1b[?1000l"); // 关闭 1000（1003 也随之关，回到 None）
+    QVERIFY(core.mouseMode() == TerminalCore::MouseMode::None);
+}
+
+void TestVt::mouseReportEmitsBytes() {
+    TerminalCore core(5, 20);
+    core.feed("\x1b[?1000h"); // 应用请求鼠标上报，否则 vterm 不产出字节
+    QSignalSpy spy(&core, &TerminalCore::outputToPty);
+    core.mouseMove(2, 3, Qt::NoModifier);
+    core.mouseButton(1, true, Qt::NoModifier); // 左键按下
+    QVERIFY(spy.count() >= 1); // 至少产出一段 CSI 鼠标上报序列
+}
+
+void TestVt::ansiPaletteRecolors() {
+    TerminalCore core(3, 10);
+    // 把 ANSI 索引 1（红槽）改成一个独特色，再让终端用 SGR 31 输出一个字符
+    QList<QColor> pal;
+    for (int i = 0; i < 16; ++i)
+        pal.append(QColor(Qt::black));
+    pal[1] = QColor(0x12, 0x34, 0x56); // 独特、绝不会与 libvterm 内置红撞
+    core.applyAnsiPalette(pal);
+
+    core.feed("\x1b[31mX"); // 前景 = ANSI 1
+    QCOMPARE(core.cellAt(0, 0).text, QStringLiteral("X"));
+    QCOMPARE(core.cellAt(0, 0).fg, QColor(0x12, 0x34, 0x56)); // 取到注入后的色
 }
 
 QTEST_GUILESS_MAIN(TestVt)

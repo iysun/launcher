@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QGuiApplication>
 #include <QImage>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPainter>
@@ -32,6 +33,19 @@ QHash<QString, QString> Theme::loadColors(const QString &jsonPath) {
     const QJsonObject colors = root["colors"].toObject();
     for (auto it = colors.constBegin(); it != colors.constEnd(); ++it)
         result.insert(it.key(), it.value().toString());
+    return result;
+}
+
+// 读主题 JSON 顶层的可选 `ansi` 数组（16 个 hex 字符串）。缺失/非数组返回空列表，
+// 由 ansiPalette() 负责回退填满；非法颜色项以无效 QColor 占位，同样在填满时被替换。
+QList<QColor> Theme::loadAnsi(const QString &jsonPath) {
+    QList<QColor> result;
+    QFile         f(jsonPath);
+    if (!f.open(QIODevice::ReadOnly)) return result;
+
+    const QJsonArray arr = QJsonDocument::fromJson(f.readAll()).object()["ansi"].toArray();
+    for (const QJsonValue &v : arr)
+        result.append(QColor(v.toString()));
     return result;
 }
 
@@ -105,10 +119,16 @@ void Theme::init(const QString &appearanceMode, const QString &darkCode, const Q
     const QString resolved = resolveCode(appearanceMode, darkCode, lightCode);
     m_code                 = resolved.isEmpty() ? "mocha" : resolved;
     m_mochaFallback        = loadColors(":/themes/mocha.json");
+    m_mochaAnsi            = loadAnsi(":/themes/mocha.json");
 
     m_colors = loadColors(themesDir() + "/" + m_code + ".json");
-    if (m_colors.isEmpty()) // 内置主题的 datadir 副本理论上落盘后必然存在；此处兜底覆盖异常场景
+    m_ansi   = loadAnsi(themesDir() + "/" + m_code + ".json");
+    if (m_colors.isEmpty()) { // 内置主题的 datadir 副本理论上落盘后必然存在；此处兜底覆盖异常场景
         m_colors = loadColors(QString(":/themes/%1.json").arg(m_code));
+        m_ansi   = loadAnsi(QString(":/themes/%1.json").arg(m_code));
+    }
+    if (m_ansi.isEmpty()) // datadir 里是老版本（无 ansi 字段）的内置主题：回退到其资源副本
+        m_ansi = loadAnsi(QString(":/themes/%1.json").arg(m_code));
     if (m_colors.isEmpty()) // 自定义主题文件损坏/缺失时的最终兜底，保证界面至少可见
         m_colors = m_mochaFallback;
 
@@ -128,6 +148,28 @@ QString Theme::c(const QString &role) {
 
 QColor Theme::color(const QString &role) {
     return QColor(instance().colorFor(role));
+}
+
+QList<QColor> Theme::ansiPalette() {
+    // 最终兜底：标准 xterm ANSI 16 色（当前主题与内置 mocha 都没提供 ansi 时用）
+    static const char *kDefault[16] = {
+        "#000000", "#cd0000", "#00cd00", "#cdcd00", "#0000ee", "#cd00cd",
+        "#00cdcd", "#e5e5e5", "#7f7f7f", "#ff0000", "#00ff00", "#ffff00",
+        "#5c5cff", "#ff00ff", "#00ffff", "#ffffff"};
+
+    const Theme        &inst = instance();
+    QList<QColor>       out;
+    out.reserve(16);
+    for (int i = 0; i < 16; ++i) {
+        // 当前主题 → 内置 mocha → 标准默认；任一层无效则继续回退
+        if (i < inst.m_ansi.size() && inst.m_ansi[i].isValid())
+            out.append(inst.m_ansi[i]);
+        else if (i < inst.m_mochaAnsi.size() && inst.m_mochaAnsi[i].isValid())
+            out.append(inst.m_mochaAnsi[i]);
+        else
+            out.append(QColor(kDefault[i]));
+    }
+    return out;
 }
 
 QString Theme::checkIconPath() {

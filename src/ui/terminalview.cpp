@@ -77,6 +77,7 @@ TerminalView::TerminalView(QWidget *parent) : QWidget(parent) {
 
     m_core = new TerminalCore(m_rows, m_cols, this);
     m_core->setDefaultColors(m_defaultFg, m_defaultBg);
+    m_core->applyAnsiPalette(Theme::ansiPalette()); // ANSI 16 色跟主题（启动一次）
 
     connect(m_core, &TerminalCore::outputToPty, this, &TerminalView::outputToPty);
     connect(m_core, &TerminalCore::damaged, this, [this] { update(); });
@@ -89,6 +90,13 @@ TerminalView::TerminalView(QWidget *parent) : QWidget(parent) {
         if (m_scrollOffset > 0)
             m_scrollOffset = std::clamp(m_scrollOffset + delta, 0, m_core->historySize());
         update();
+    });
+    // 应用鼠标追踪模式变化：Move 模式需要即使未按键也收到 mouseMoveEvent
+    connect(m_core, &TerminalCore::mouseModeChanged, this, [this](TerminalCore::MouseMode m) {
+        m_mouseMode = m;
+        setMouseTracking(m == TerminalCore::MouseMode::Move);
+        if (m != TerminalCore::MouseMode::None)
+            clearSelection(); // 应用接管鼠标，清掉遗留选区
     });
 }
 
@@ -216,7 +224,40 @@ void TerminalView::pasteClipboard() {
     m_core->pasteText(t); // 编码经 outputToPty 信号写回 PTY
 }
 
+QPoint TerminalView::mouseCellOf(const QPointF &p) const {
+    const int col = std::clamp(int(p.x() / m_cellW), 0, m_cols - 1);
+    const int row = std::clamp(int(p.y() / m_cellH), 0, m_rows - 1);
+    return {col, row};
+}
+
+bool TerminalView::forwardMouseToApp(Qt::KeyboardModifiers mods) const {
+    // 应用开了鼠标模式且未按 Shift 时转发；Shift 强制本地选区（xterm/foot 惯例）
+    return m_mouseMode != TerminalCore::MouseMode::None && !(mods & Qt::ShiftModifier);
+}
+
+namespace {
+// Qt 鼠标键 → libvterm 按钮号（1=左 2=中 3=右）
+int vtMouseButton(Qt::MouseButton b) {
+    switch (b) {
+    case Qt::LeftButton:   return 1;
+    case Qt::MiddleButton: return 2;
+    case Qt::RightButton:  return 3;
+    default:               return 0;
+    }
+}
+} // namespace
+
 void TerminalView::mousePressEvent(QMouseEvent *e) {
+    if (forwardMouseToApp(e->modifiers())) {
+        const int btn = vtMouseButton(e->button());
+        if (btn) {
+            const QPoint c = mouseCellOf(e->position());
+            m_core->mouseMove(c.y(), c.x(), e->modifiers());
+            m_core->mouseButton(btn, true, e->modifiers());
+            e->accept();
+            return;
+        }
+    }
     if (e->button() == Qt::LeftButton) {
         clearSelection();
         m_selAnchor = m_selEnd = posFromPixel(e->position());
@@ -233,6 +274,20 @@ void TerminalView::mousePressEvent(QMouseEvent *e) {
 }
 
 void TerminalView::mouseMoveEvent(QMouseEvent *e) {
+    if (forwardMouseToApp(e->modifiers()) && !m_selecting) {
+        // Drag 模式只在按键期间上报移动；Move 模式任意移动都上报
+        const bool anyButton = e->buttons() != Qt::NoButton;
+        if (m_mouseMode == TerminalCore::MouseMode::Move ||
+            (m_mouseMode == TerminalCore::MouseMode::Drag && anyButton)) {
+            const QPoint c = mouseCellOf(e->position());
+            if (c != m_lastReportedCell) {
+                m_lastReportedCell = c;
+                m_core->mouseMove(c.y(), c.x(), e->modifiers());
+            }
+        }
+        e->accept();
+        return;
+    }
     if (m_selecting) {
         const SelPos pos = posFromPixel(e->position());
         if (!(pos == m_selEnd)) {
@@ -247,6 +302,17 @@ void TerminalView::mouseMoveEvent(QMouseEvent *e) {
 }
 
 void TerminalView::mouseReleaseEvent(QMouseEvent *e) {
+    // 转发释放：即便本次未按 Shift，只要不是正在本地选区，就上报给应用
+    if (m_mouseMode != TerminalCore::MouseMode::None && !m_selecting) {
+        const int btn = vtMouseButton(e->button());
+        if (btn) {
+            const QPoint c = mouseCellOf(e->position());
+            m_core->mouseMove(c.y(), c.x(), e->modifiers());
+            m_core->mouseButton(btn, false, e->modifiers());
+            e->accept();
+            return;
+        }
+    }
     if (e->button() == Qt::LeftButton && m_selecting) {
         m_selecting = false;
         e->accept();
@@ -260,20 +326,27 @@ void TerminalView::mouseDoubleClickEvent(QMouseEvent *e) {
         QWidget::mouseDoubleClickEvent(e);
         return;
     }
-    // 双击选词：以点击格为中心向两侧扩展非空白格
-    const SelPos hit     = posFromPixel(e->position());
-    auto         isBlank = [this, &hit](int col) {
+    // 双击选词：以点击格为中心向两侧扩展「词字符」。分隔符集合含空白与常见标点，但
+    // 保留 / . - _ ~ 等为词内，让路径 / 域名 / kebab 命名能整体选中（终端用户预期）。
+    const SelPos hit        = posFromPixel(e->position());
+    auto         isWordChar = [this, &hit](int col) {
         const QString t = cellAtAbs(hit.row, col).text;
-        return t.isEmpty() || t == QStringLiteral(" ");
+        if (t.isEmpty())
+            return false;
+        const QChar ch = t.at(0);
+        if (ch.isSpace())
+            return false;
+        static const QString kDelims = QStringLiteral("`~!@#$%^&*()=+[]{}\\|;:'\",<>?");
+        return !kDelims.contains(ch);
     };
-    if (isBlank(hit.col)) {
+    if (!isWordChar(hit.col)) {
         e->accept();
         return;
     }
     int from = hit.col, to = hit.col;
-    while (from > 0 && !isBlank(from - 1))
+    while (from > 0 && isWordChar(from - 1))
         --from;
-    while (to < m_cols - 1 && !isBlank(to + 1))
+    while (to < m_cols - 1 && isWordChar(to + 1))
         ++to;
     m_selAnchor = {hit.row, from};
     m_selEnd    = {hit.row, to};
@@ -286,6 +359,18 @@ void TerminalView::wheelEvent(QWheelEvent *e) {
     const int steps = e->angleDelta().y() / 120; // 正 = 向上
     if (steps == 0 || !m_core) {
         e->ignore();
+        return;
+    }
+    // 应用鼠标模式（未按 Shift）：滚轮上报为 button 4（上）/ 5（下）
+    if (forwardMouseToApp(e->modifiers())) {
+        const int    btn = steps > 0 ? 4 : 5;
+        const QPoint c   = mouseCellOf(e->position());
+        m_core->mouseMove(c.y(), c.x(), e->modifiers()); // 先定位，button 复用当前坐标
+        for (int i = 0; i < qAbs(steps); ++i) {
+            m_core->mouseButton(btn, true, e->modifiers());
+            m_core->mouseButton(btn, false, e->modifiers());
+        }
+        e->accept();
         return;
     }
     if (m_core->altScreen()) {
@@ -399,6 +484,19 @@ void TerminalView::keyPressEvent(QKeyEvent *e) {
         }
     }
 
+    // Shift+翻页/Home/End：本地回看 scrollback，不下发给应用（经典终端行为）；
+    // 须在 mapSpecial 之前拦截，否则这些键会被编码发给应用。
+    if (mods & Qt::ShiftModifier) {
+        const int page = std::max(1, m_rows - 1); // 翻一屏，留一行重叠
+        switch (e->key()) {
+        case Qt::Key_PageUp:   scrollTo(m_scrollOffset + page);    e->accept(); return;
+        case Qt::Key_PageDown: scrollTo(m_scrollOffset - page);    e->accept(); return;
+        case Qt::Key_Home:     scrollTo(m_core->historySize());    e->accept(); return; // 跳到最顶
+        case Qt::Key_End:      scrollTo(0);                        e->accept(); return; // 贴回底部
+        default: break;
+        }
+    }
+
     TerminalCore::SpecialKey sk;
     if (mapSpecial(e->key(), sk)) {
         scrollTo(0); // 写 PTY 的按键先贴底（经典终端行为）
@@ -415,6 +513,37 @@ void TerminalView::keyPressEvent(QKeyEvent *e) {
         m_core->keyChar('a' + (e->key() - Qt::Key_A), mods);
         e->accept();
         return;
+    }
+
+    // 其余控制字符：Ctrl+[ 期望等价 Esc(0x1b)——但 libvterm 对 '[' 走 CSI u 编码
+    // （原样交给 keyChar 会得到 ESC[91;5u，vanilla vim 不认），故直接发无修饰的
+    // Escape。Ctrl+\ ] ^ _ 与 Ctrl+Space 则由 libvterm 的 c&0x1f 正确生成控制字节。
+    if (mods & Qt::ControlModifier) {
+        int  base  = 0;      // 送 keyChar 的基字符；0 = 不处理
+        bool asEsc = false;
+        switch (e->key()) {
+        case Qt::Key_BracketLeft:  asEsc = true; break; // Ctrl+[ → ESC 0x1b
+        case Qt::Key_Backslash:    base = '\\'; break;  // → 0x1c
+        case Qt::Key_BracketRight: base = ']';  break;  // → 0x1d
+        case Qt::Key_AsciiCircum:  base = '^';  break;  // → 0x1e
+        case Qt::Key_Underscore:   base = '_';  break;  // → 0x1f
+        case Qt::Key_Space:        base = ' ';  break;  // Ctrl+Space → 0x00
+        default: break;
+        }
+        if (asEsc) {
+            scrollTo(0);
+            clearSelection();
+            m_core->keySpecial(TerminalCore::SpecialKey::Escape, Qt::NoModifier);
+            e->accept();
+            return;
+        }
+        if (base) {
+            scrollTo(0);
+            clearSelection();
+            m_core->keyChar(static_cast<uint32_t>(base), Qt::ControlModifier);
+            e->accept();
+            return;
+        }
     }
 
     const QString t = e->text();

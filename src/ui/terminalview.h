@@ -1,6 +1,7 @@
 #pragma once
 #include "vt/terminalcore.h"
 #include <QFont>
+#include <QPoint>
 #include <QWidget>
 
 // 终端渲染 + 输入控件：持有 TerminalCore（libvterm），用 QPainter 逐格自绘，
@@ -59,6 +60,11 @@ private:
     void               copySelection();
     void               pasteClipboard();
 
+    // 鼠标上报：屏幕内 0-based 行列（应用鼠标模式基本在 altscreen，贴底）
+    QPoint mouseCellOf(const QPointF &p) const;
+    // 事件是否应转发给应用（应用开了鼠标模式且未按 Shift）；Shift=强制本地选区
+    bool   forwardMouseToApp(Qt::KeyboardModifiers mods) const;
+
     QColor m_defaultFg, m_defaultBg;
 
     TerminalCore *m_core = nullptr;
@@ -69,6 +75,9 @@ private:
 
     bool   m_hasSel = false, m_selecting = false;
     SelPos m_selAnchor, m_selEnd; // 端点含入（end 指向格子本身）
+
+    TerminalCore::MouseMode m_mouseMode = TerminalCore::MouseMode::None;
+    QPoint                  m_lastReportedCell{-1, -1}; // 去重连续 mouseMove 上报
 
     QString m_preedit; // IME 预编辑串（候选未上屏），画在光标处
 };

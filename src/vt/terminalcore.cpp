@@ -52,6 +52,9 @@ int setTermPropCb(VTermProp prop, VTermValue *val, void *user) {
     case VTERM_PROP_ALTSCREEN:
         tc->sinkAltScreen(val->boolean != 0);
         break;
+    case VTERM_PROP_MOUSE:
+        tc->sinkMouseMode(val->number);
+        break;
     default:
         break;
     }
@@ -207,6 +210,33 @@ void TerminalCore::pasteText(const QString &text) {
     vterm_keyboard_end_paste(m_vt);
 }
 
+void TerminalCore::mouseMove(int row, int col, Qt::KeyboardModifiers mods) {
+    if (m_vt)
+        vterm_mouse_move(m_vt, row, col, toVtMod(mods));
+}
+
+void TerminalCore::mouseButton(int button, bool pressed, Qt::KeyboardModifiers mods) {
+    if (m_vt)
+        vterm_mouse_button(m_vt, button, pressed, toVtMod(mods));
+}
+
+void TerminalCore::applyAnsiPalette(const QList<QColor> &palette) {
+    if (!m_vt)
+        return;
+    VTermState *st = vterm_obtain_state(m_vt);
+    if (!st)
+        return;
+    const int n = std::min(static_cast<int>(palette.size()), 16);
+    for (int i = 0; i < n; ++i) {
+        const QColor &q = palette[i];
+        if (!q.isValid())
+            continue;
+        VTermColor col;
+        vterm_color_rgb(&col, q.red(), q.green(), q.blue());
+        vterm_state_set_palette_color(st, i, &col);
+    }
+}
+
 TerminalCore::Cell TerminalCore::cellAt(int row, int col) const {
     if (!m_screen)
         return {};
@@ -310,6 +340,20 @@ void TerminalCore::sinkSbClear() {
 }
 
 void TerminalCore::sinkAltScreen(bool on) { m_altScreen = on; }
+
+void TerminalCore::sinkMouseMode(int vtermMouseProp) {
+    MouseMode m = MouseMode::None;
+    switch (vtermMouseProp) {
+    case VTERM_PROP_MOUSE_CLICK: m = MouseMode::Click; break;
+    case VTERM_PROP_MOUSE_DRAG:  m = MouseMode::Drag;  break;
+    case VTERM_PROP_MOUSE_MOVE:  m = MouseMode::Move;  break;
+    default:                     m = MouseMode::None;  break;
+    }
+    if (m == m_mouseMode)
+        return;
+    m_mouseMode = m;
+    emit mouseModeChanged(m);
+}
 
 void TerminalCore::sinkTitleFragment(const char *s, int len, bool initial, bool final) {
     if (initial)

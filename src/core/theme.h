@@ -31,6 +31,10 @@ public:
     static QString c(const QString &role);     // QSS 拼接用："#rrggbb"
     static QColor  color(const QString &role); // QPainter 用
 
+    // 当前主题的 ANSI 16 色调色板（索引 0..15，标准顺序 + 8 bright）。主题 JSON 的
+    // 可选 `ansi` 数组；缺失/不全的索引回退内置 mocha → 内置标准调色板。终端启动时注入。
+    static QList<QColor> ansiPalette();
+
     // 扫描 datadir/themes/*.json，返回 (code, displayName) 列表，供设置页下拉框使用。
     // appearance 非空时按 meta.appearance 过滤（"dark"/"light"）；主题文件缺失/
     // 非法该字段一律按 "dark" 归类，不会导致主题从任何下拉框里消失。
@@ -47,10 +51,13 @@ private:
     QString resolveCode(const QString &appearanceMode, const QString &darkCode,
                         const QString &lightCode) const;
     static QHash<QString, QString> loadColors(const QString &jsonPath);
+    static QList<QColor>           loadAnsi(const QString &jsonPath); // 读 root["ansi"] 16 色
     static QString                 themesDir();
     static QString                 cacheDir();
 
     QHash<QString, QString> m_colors;        // 当前主题
     QHash<QString, QString> m_mochaFallback; // 内置 mocha 兜底，永远从 :/themes/mocha.json 加载
+    QList<QColor>           m_ansi;          // 当前主题 ANSI 16 色（不全则回退填满）
+    QList<QColor>           m_mochaAnsi;     // 内置 mocha 的 ANSI 16 色兜底
     QString                 m_code = "mocha";
 };

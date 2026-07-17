@@ -1,6 +1,7 @@
 #pragma once
 #include <QByteArray>
 #include <QColor>
+#include <QList>
 #include <QObject>
 #include <QString>
 #include <memory>
@@ -29,6 +30,11 @@ public:
         F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12
     };
 
+    // 应用请求的鼠标追踪模式（VTERM_PROP_MOUSE 映射）：None=应用不要鼠标，
+    // 视图自行做本地选区；Click=仅按下/释放；Drag=按下期间的移动也上报；
+    // Move=任意移动都上报（需 setMouseTracking）。
+    enum class MouseMode { None, Click, Drag, Move };
+
     explicit TerminalCore(int rows, int cols, QObject *parent = nullptr);
     ~TerminalCore() override;
 
@@ -37,6 +43,14 @@ public:
     void keyChar(uint32_t codepoint, Qt::KeyboardModifiers mods);
     void keySpecial(SpecialKey key, Qt::KeyboardModifiers mods);
     void pasteText(const QString &text); // bracketed paste（应用开启该模式时自动包裹）
+
+    // ── 鼠标上报（vim/htop/tmux 鼠标模式）：编码字节经 outputToPty 写回 PTY ──
+    MouseMode mouseMode() const { return m_mouseMode; }
+    void      mouseMove(int row, int col, Qt::KeyboardModifiers mods);   // 0-based 屏幕格
+    void      mouseButton(int button, bool pressed, Qt::KeyboardModifiers mods); // 1=左 2=中 3=右 4/5=滚轮
+
+    // ANSI 16 色调色板（索引 0..15）注入 vterm，与主题联动；启动时调一次。
+    void applyAnsiPalette(const QList<QColor> &palette);
 
     Cell cellAt(int row, int col) const; // vterm_screen_get_cell + 颜色转 RGB
     int  rows() const { return m_rows; }
@@ -66,6 +80,7 @@ public:
     int  sinkPopLine(int cols, void *cells);        // cells: VTermScreenCell*（回填）
     void sinkSbClear();
     void sinkAltScreen(bool on);
+    void sinkMouseMode(int vtermMouseProp); // VTERM_PROP_MOUSE_* → MouseMode
 
 signals:
     void outputToPty(const QByteArray &bytes);          // 键盘编码 / 查询响应 → 写回 PTY
@@ -74,6 +89,7 @@ signals:
     void bell();
     void titleChanged(const QString &title);
     void scrollbackChanged(int delta); // 历史行数变化：+1 push / -1 pop / -n clear
+    void mouseModeChanged(MouseMode mode); // 应用切换鼠标追踪模式
 
 private:
     struct Scrollback; // 定义在 .cpp（内含 VTermScreenCell，不泄漏到头文件）
@@ -84,6 +100,7 @@ private:
     int          m_cursorRow = 0, m_cursorCol = 0;
     bool         m_cursorVisible = true;
     bool         m_altScreen = false;
+    MouseMode    m_mouseMode = MouseMode::None;
     QString      m_titleBuf;
     std::unique_ptr<Scrollback> m_sb;
 };

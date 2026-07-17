@@ -11,5 +11,11 @@
         "highlight": "#f5e0dc",
         "accentHover": "#7aa2f7",
         "danger": "#f38ba8"
-    }
+    },
+    "ansi": [
+        "#45475a", "#f38ba8", "#a6e3a1", "#f9e2af",
+        "#89b4fa", "#f5c2e7", "#94e2d5", "#bac2de",
+        "#585b70", "#f38ba8", "#a6e3a1", "#f9e2af",
+        "#89b4fa", "#f5c2e7", "#94e2d5", "#a6adc8"
+    ]
 }
