@@ -34,4 +34,10 @@ libvterm 的 `VTerm` 对象**非线程安全，只在 GUI 线程访问**。`PtyR
 
 ## 现状与后续
 
-MVP 已验证：起 pwsh、彩色渲染、可交互、resize、关闭重开无残留。**未做**：滚动回看（libvterm 核心不保留 scrollback，需自实现 `sb_pushline/popline`）、鼠标选择/复制粘贴、Linux 端（ConPTY→forkpty）。
+MVP 已验证：起 pwsh、彩色渲染、可交互、resize、关闭重开无残留。后续已补齐：
+
+- **滚动回看**：接入 `sb_pushline/popline/clear` 回调，历史行**原样存 `VTermScreenCell`**（deque 上限 5000 行，驱逐计数做全局行号基准），开启 `vterm_screen_enable_reflow`。存储结构定义在 terminalcore.cpp 内（不透明指针），维持 vterm 类型不出 .cpp 的约束。备用屏（`VTERM_PROP_ALTSCREEN`）下滚轮转发为方向键。注意：reflow 下 resize 会触发 push/pop 往返，回调蹦床里只动 deque，槽里严禁写回 vterm（重入）。
+- **鼠标选择/复制粘贴**：选区端点用全局行号（驱逐计数 + 序号），滚动/驱逐下天然稳定；Ctrl+Shift+C/V 拦截必须放在 Ctrl+字母编码分支**之前**；粘贴走 `vterm_keyboard_start/end_paste`（bracketed paste 自动包裹）。
+- **中文 IME**：`WA_InputMethodEnabled` + `inputMethodEvent`；候选框跟随靠 `cursorMoved` 时 `updateMicroFocus()`。
+
+**仍未做**：Linux 端（ConPTY→forkpty）、脏区局部重绘（damage 带参但全量 update）。

@@ -46,6 +46,7 @@
         "help.commandDesc": "Commands (bare / list all)",
         "help.fileSearch": "File search",
         "help.webSearch": "Web search (Google / Bing / Baidu / GitHub)",
+        "help.runCommand": "Run command in built-in terminal",
         "help.commandsLabel": "Commands",
 
         "hotkey.pressKeys": "(Press a key combo...)",
@@ -54,6 +55,11 @@
         "hotkey.registerFailedBody": "The global hotkey could not be registered (it may be reserved by the system or another app). Change it in /settings.",
 
         "web.searchIn": "Search %1",
+
+        "run.hint": "Type a command, Enter to run in terminal",
+        "run.hintSub": "Enter opens the built-in terminal",
+        "run.execute": "Run: %1",
+        "run.executeSub": "Runs in the built-in terminal",
 
         "cmd.help": "Show help",
         "cmd.quit": "Quit launcher",

@@ -80,6 +80,14 @@ void TerminalWindow::startSession() {
     setWindowTitle(QStringLiteral("Terminal"));
 }
 
+void TerminalWindow::runCommand(const QString &cmd) {
+    startSession(); // 幂等；只在方法内触碰 m_pty，不新增任何长存信号连接
+    if (!m_started || cmd.isEmpty())
+        return;
+    const QByteArray bytes = cmd.toUtf8() + "\r";
+    m_pty->write(bytes.constData(), bytes.size());
+}
+
 void TerminalWindow::onSessionEnded() {
     setWindowTitle(QStringLiteral("Terminal (已退出)"));
     // 允许下次 /terminal 重新起会话

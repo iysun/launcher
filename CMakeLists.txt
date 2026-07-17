@@ -38,6 +38,7 @@ qt_add_executable(launcher WIN32
     src/plugins/appplugin.cpp
     src/plugins/commandplugin.cpp
     src/plugins/fileplugin.cpp
+    src/plugins/runplugin.cpp
     src/plugins/webplugin.cpp
     src/ui/resultdelegate.cpp
     src/ui/settingsdialog.cpp

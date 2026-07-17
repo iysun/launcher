@@ -170,6 +170,7 @@ src/
 │   ├── appplugin.h / .cpp      # 应用搜索（Start Menu .lnk / .desktop，拼音匹配）
 │   ├── commandplugin.h / .cpp  # "/" 前缀命令插件（通用注册表，main.cpp 装配动作）
 │   ├── fileplugin.h / .cpp     # "@" 前缀文件搜索（异步，QtConcurrent）
+│   ├── runplugin.h / .cpp      # ":" 前缀命令执行（runner 由 main.cpp 装配，写入内置终端）
 │   └── webplugin.h / .cpp      # "?" 前缀网页搜索（Google/Bing/Baidu/GitHub）
 ├── pty/
 │   ├── conpty.h / .cpp         # Windows ConPTY 封装（起 shell、读写管道、resize、拆解）

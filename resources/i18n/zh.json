@@ -46,6 +46,7 @@
         "help.commandDesc": "命令（裸 / 列出全部）",
         "help.fileSearch": "文件搜索",
         "help.webSearch": "网页搜索（Google / Bing / Baidu / GitHub）",
+        "help.runCommand": "在内置终端执行命令",
         "help.commandsLabel": "命令",
 
         "hotkey.pressKeys": "(按下快捷键...)",
@@ -54,6 +55,11 @@
         "hotkey.registerFailedBody": "当前全局热键未能注册（可能被系统或其他程序占用）。请在 /settings 里更换热键。",
 
         "web.searchIn": "在 %1 中搜索",
+
+        "run.hint": "输入命令，回车在终端执行",
+        "run.hintSub": "回车打开内置终端",
+        "run.execute": "执行：%1",
+        "run.executeSub": "在内置终端中运行",
 
         "cmd.help": "显示帮助",
         "cmd.quit": "退出 launcher",

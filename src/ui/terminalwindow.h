@@ -15,6 +15,9 @@ public:
     ~TerminalWindow() override;
 
     void startSession(); // 懒启动 shell，幂等
+    // 在当前会话执行命令（写 shell stdin）；未启动会话则先 startSession。
+    // 管道有缓冲：刚启动即写入，shell 就绪后照样读到。空命令 = 只保证会话存在。
+    void runCommand(const QString &cmd);
 
 protected:
     void closeEvent(QCloseEvent *e) override;

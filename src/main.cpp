@@ -5,6 +5,7 @@
 #include "plugins/appplugin.h"
 #include "plugins/commandplugin.h"
 #include "plugins/fileplugin.h"
+#include "plugins/runplugin.h"
 #include "plugins/webplugin.h"
 #include "ui/settingsdialog.h"
 #include "ui/terminalwindow.h"
@@ -54,6 +55,14 @@ int main(int argc, char *argv[]) {
     });
 
     win.addPlugin(cmd);
+
+    // ":" 前缀：在内置终端执行命令（`: ipconfig`）。复用同一终端单例。
+    win.addPlugin(new RunPlugin([terminalWin](const QString &c) {
+        terminalWin->show();
+        terminalWin->raise();
+        terminalWin->activateWindow();
+        terminalWin->runCommand(c);
+    }));
 
     // 所有插件注册完毕后创建设置对话框（插件列表已完整）
     auto *settingsDialog = new SettingsDialog(settings, win.plugins());

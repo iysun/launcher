@@ -21,7 +21,8 @@
 | 系统托盘 | 启动后常驻托盘放大镜图标（QPainter 绘制，Catppuccin blue）；双击托盘图标等同全局热键（toggle 显示/隐藏）；右键菜单：显示/隐藏、退出 |
 | 设置界面 | `/settings` 命令打开；Catppuccin 风格自定义对话框（可拖拽标题栏，Esc 关闭，内容区超出屏幕高度时可滚动）；每次显示都会用当前设置刷新表单，保证"取消"不残留未保存的编辑。配置持久化到 `settings.json`：① 全局热键（`HotkeyEdit` 低级钩子录制，支持 Alt+Space 等系统保留键）；② 开机自启动（Windows 写入 `HKCU\...\Run`）；③ 插件启用/禁用；④ 网页搜索引擎优先级（列表 + 上下移动排序 + 添加/移除自定义引擎，内置引擎不可删除）；⑤ 文件搜索目录列表（添加/移除，默认桌面/文档/下载/图片）；⑥ 一键重置为出厂默认（仅重置表单，需再点保存才落盘） |
 | 多语言 (i18n) | 内置简体中文/English，`/settings` 页语言下拉框切换，需重启生效（不支持热切换）。语言包是 datadir `i18n/<code>.json` 文件，内置语言首次运行时从 Qt 资源落盘，用户可直接编辑或复制出自定义语言；详见 [AGENTS.md「自定义语言」](../AGENTS.md#自定义语言) |
-| 内嵌终端 | `/terminal` 命令打开独立终端窗口：基于 **libvterm**（VT 解析/屏幕状态内核，vendored 纯 C）+ **ConPTY** 起 shell（pwsh > powershell > cmd）+ QPainter 逐格自绘 + 键盘编码。支持 ANSI 彩色、光标、窗口 resize 往返、可交互（vim/htop 等）；单例窗口，关闭后可重开新会话。**未做**：滚动回看、鼠标选择/复制粘贴、Linux 端（ConPTY→forkpty）。工程坑见 [notes/embedded-terminal-libvterm.md](notes/embedded-terminal-libvterm.md) |
+| 内嵌终端 | `/terminal` 命令打开独立终端窗口：基于 **libvterm**（VT 解析/屏幕状态内核，vendored 纯 C）+ **ConPTY** 起 shell（pwsh > powershell > cmd）+ QPainter 逐格自绘 + 键盘编码。支持 ANSI 彩色、光标、窗口 resize 往返（reflow）、可交互（vim/htop 等）；**滚动回看**（5000 行历史，滚轮回看/按键贴底/备用屏滚轮转方向键/右侧位置指示条）；**鼠标选择与复制粘贴**（拖选跨历史行、双击选词、Ctrl+Shift+C/V、右键粘贴、bracketed paste）；**中文 IME**（预编辑串绘制、候选框跟随光标）；单例窗口，关闭后可重开新会话。**未做**：Linux 端（ConPTY→forkpty）、脏区局部重绘。工程坑见 [notes/embedded-terminal-libvterm.md](notes/embedded-terminal-libvterm.md) |
+| 命令执行插件 | `:` 前缀触发（如 `: ipconfig`），回车弹出内置终端并执行该命令（写 shell stdin，会话复用）；裸 `:` 显示提示项（回车只开终端）。runner 由 `main.cpp` 装配，插件与终端窗口解耦；执行过的命令按 frecency 上浮 |
 | 多主题 (theme) | 内置 4 套主题（Dark/Catppuccin Mocha、Light/Catppuccin Latte、Dracula、Nord）。`/settings` 页三项联动的外观设置（类 Zed 编辑器设计）：「外观」深色/浅色/跟随系统 + 分别为深色/浅色模式各配一个默认主题；跟随系统时按启动那一刻的系统深浅色偏好自动选用对应默认主题。三者均需重启生效（与语言切换共用同一重启提示，不支持运行时热切换/热跟随）。主题包是 datadir `themes/<code>.json` 文件，内置主题首次运行时从 Qt 资源落盘，用户可直接编辑或新增自定义主题；详见 [AGENTS.md「自定义主题」](../AGENTS.md#自定义主题) |
 
 ## 待实现
