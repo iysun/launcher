@@ -3,6 +3,7 @@
 #include <QWidget>
 
 class AppSettings;
+class QFrame;
 class QHotkey;
 class QKeyEvent;
 class QLineEdit;
@@ -10,7 +11,9 @@ class QListWidget;
 class QListWidgetItem;
 class QSystemTrayIcon;
 class QTimer;
+class QVBoxLayout;
 class ResultDelegate;
+class TerminalPane;
 class UsageStore;
 
 class MainWindow : public QWidget {
@@ -19,6 +22,11 @@ public:
     explicit MainWindow(AppSettings *settings, QWidget *parent = nullptr);
     void                    addPlugin(IPlugin *plugin);
     const QList<IPlugin *> &plugins() const { return m_plugins; }
+
+    // 内联终端模式（融合入口）：把卡片切换为内嵌交互终端，键盘 raw 直送 shell。
+    // cmd 非空则进入后立即执行该命令。会话后台留存，再次进入即续。
+    void enterTerminal(const QString &cmd = QString());
+    void exitTerminal(); // 切回搜索模式（不 teardown 会话）
 
 protected:
     void changeEvent(QEvent *e) override;
@@ -31,6 +39,8 @@ private slots:
     void toggle();
 
 private:
+    enum class Mode { Launch, Terminal }; // 搜索模式 / 内联终端模式
+
     void  setupUi();
     void  showResults(const QList<ResultItem> &items);
     void  mergeAndShow(); // 合并 base+async → 排序 → 截断 → 主线程装饰 → 展示
@@ -42,6 +52,11 @@ private:
     void  activate(QListWidgetItem *item, bool alt); // alt=Ctrl+Enter 触发次级动作
     bool  handleEmacsKey(QKeyEvent *key);            // Emacs 风格键位，消费则返回 true
     void  moveSelection(int delta);                  // 移动列表选中项（焦点不离开搜索框）
+
+    QFrame          *m_card       = nullptr; // 圆角卡片容器（终端模式改其固定宽）
+    QVBoxLayout     *m_cardLayout = nullptr; // 卡片内布局（终端 pane 懒挂于此）
+    TerminalPane    *m_term       = nullptr; // 内联终端（懒建，跨模式切换后台留存）
+    Mode             m_mode       = Mode::Launch;
 
     QLineEdit       *m_search;
     QListWidget     *m_list;

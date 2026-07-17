@@ -4,6 +4,7 @@
 #include "core/theme.h"
 #include "core/usagestore.h"
 #include "ui/resultdelegate.h"
+#include "ui/terminalpane.h"
 #include <algorithm>
 #include <QApplication>
 #include <QCursor>
@@ -28,6 +29,8 @@ static constexpr int kItemH           = 56; // 须与 ResultDelegate::sizeHint �
 static constexpr int kSearchH         = 52;
 static constexpr int kMaxItems        = 8;
 static constexpr int kQueryDebounceMs = 100; // 停止输入后再查询，避免逐键查询
+static constexpr int kTermW           = 900; // 终端模式卡片宽
+static constexpr int kTermH           = 520; // 终端模式 pane 高
 
 MainWindow::MainWindow(AppSettings *settings, QWidget *parent)
     : QWidget(parent), m_settings(settings) {
@@ -114,10 +117,10 @@ void MainWindow::setupUi() {
 
     // 整体一张圆角卡片：背景 + 描边 + 圆角都由 card 绘制，
     // 搜索框与列表透明叠在上面，避免子控件圆角拼接产生缝隙
-    auto *card = new QFrame(this);
-    card->setObjectName("card");
-    card->setFixedWidth(kWidth);
-    card->setStyleSheet(QString(R"(
+    m_card = new QFrame(this);
+    m_card->setObjectName("card");
+    m_card->setFixedWidth(kWidth);
+    m_card->setStyleSheet(QString(R"(
         QFrame#card {
             background: %1;
             border: 1px solid %2;
@@ -125,13 +128,13 @@ void MainWindow::setupUi() {
         }
     )")
                              .arg(Theme::c("bg"), Theme::c("border")));
-    root->addWidget(card);
+    root->addWidget(m_card);
 
-    auto *cardLayout = new QVBoxLayout(card);
-    cardLayout->setContentsMargins(0, 0, 0, 0);
-    cardLayout->setSpacing(0);
+    m_cardLayout = new QVBoxLayout(m_card);
+    m_cardLayout->setContentsMargins(0, 0, 0, 0);
+    m_cardLayout->setSpacing(0);
 
-    m_search = new QLineEdit(card);
+    m_search = new QLineEdit(m_card);
     m_search->setPlaceholderText(I18n::t("search.placeholder"));
     m_search->setFixedHeight(kSearchH);
     m_search->setStyleSheet(QString(R"(
@@ -145,7 +148,7 @@ void MainWindow::setupUi() {
     )")
                                  .arg(Theme::c("text")));
 
-    m_list = new QListWidget(card);
+    m_list = new QListWidget(m_card);
     m_list->setFocusPolicy(Qt::StrongFocus);
     m_delegate = new ResultDelegate(m_list);
     m_list->setItemDelegate(m_delegate);
@@ -164,8 +167,8 @@ void MainWindow::setupUi() {
     m_list->viewport()->setAutoFillBackground(false); // 让卡片底色透出
     m_list->hide();
 
-    cardLayout->addWidget(m_search);
-    cardLayout->addWidget(m_list);
+    m_cardLayout->addWidget(m_search);
+    m_cardLayout->addWidget(m_list);
 
     connect(m_search, &QLineEdit::textChanged, this, &MainWindow::onTextChanged);
     connect(m_list, &QListWidget::itemActivated, this, &MainWindow::onItemActivated);
@@ -184,8 +187,12 @@ void MainWindow::toggle() {
         show();
         raise();
         activateWindow();
-        m_search->clear();
-        m_search->setFocus();
+        if (m_mode == Mode::Terminal && m_term) {
+            m_term->focusTerminal(); // 终端模式：唤起即回到终端，不动搜索框
+        } else {
+            m_search->clear();
+            m_search->setFocus();
+        }
     }
 }
 
@@ -194,13 +201,63 @@ void MainWindow::centerOnScreen() {
     QScreen *scr = QGuiApplication::screenAt(QCursor::pos());
     if (!scr) scr = QApplication::primaryScreen();
     const QRect geo = scr->availableGeometry();
-    // 用 left()/top() 偏移，确保在副屏或带任务栏时定位正确
-    move(geo.left() + (geo.width() - kWidth) / 2, geo.top() + geo.height() / 4);
+    // 用 left()/top() 偏移，确保在副屏或带任务栏时定位正确；终端模式更宽更高，垂直居中
+    if (m_mode == Mode::Terminal) {
+        move(geo.left() + (geo.width() - kTermW) / 2,
+             geo.top() + (geo.height() - kTermH) / 2);
+    } else {
+        move(geo.left() + (geo.width() - kWidth) / 2, geo.top() + geo.height() / 4);
+    }
 }
 
 void MainWindow::changeEvent(QEvent *e) {
-    if (e->type() == QEvent::ActivationChange && !isActiveWindow()) hide();
+    // 失焦自动隐藏仅在搜索模式生效：终端模式下 alt-tab 走开不能让会话窗口消失
+    if (m_mode == Mode::Launch && e->type() == QEvent::ActivationChange &&
+        !isActiveWindow())
+        hide();
     QWidget::changeEvent(e);
+}
+
+// ── 内联终端模式 ──────────────────────────────────────────────
+
+void MainWindow::enterTerminal(const QString &cmd) {
+    if (!m_term) { // 懒建：首次进入才创建 pane 并挂进卡片
+        m_term = new TerminalPane(m_card);
+        m_term->setCornerRadius(10); // 与卡片 border-radius 对齐，避免不透明终端糊掉圆角
+        m_cardLayout->addWidget(m_term);
+        m_term->hide();
+        // 用户在终端内按 Ctrl+` → 切回搜索；shell 退出 → 也切回搜索
+        connect(m_term, &TerminalPane::exitRequested, this, &MainWindow::exitTerminal);
+        connect(m_term, &TerminalPane::sessionEnded, this, &MainWindow::exitTerminal);
+    }
+
+    m_mode = Mode::Terminal;
+    m_search->hide();
+    m_list->hide();
+    m_card->setFixedWidth(kTermW); // 切到终端尺寸档
+    m_term->setFixedHeight(kTermH);
+    m_term->show();
+
+    if (!isVisible()) show();
+    centerOnScreen(); // 宽高都变了，重新居中
+    raise();
+    activateWindow();
+
+    m_term->startSession(); // 幂等：已在跑则续用
+    if (!cmd.isEmpty()) m_term->runCommand(cmd);
+    m_term->focusTerminal();
+}
+
+void MainWindow::exitTerminal() {
+    if (m_mode != Mode::Launch) {
+        m_mode = Mode::Launch;
+        if (m_term) m_term->hide(); // 会话不 teardown，后台留存，再进即续
+        m_card->setFixedWidth(kWidth);
+        m_search->show();
+        m_search->clear(); // 清空，回到干净搜索态（列表随空查询隐藏）
+        m_search->setFocus();
+        centerOnScreen();
+    }
 }
 
 // ── 搜索与结果 ────────────────────────────────────────────────
@@ -363,6 +420,8 @@ void MainWindow::activate(QListWidgetItem *item, bool alt) {
             m_usage->recordUse(result.action); // 记录使用，供 frecency 排序
         }
     }
+    // execute 可能已切入内联终端模式（:cmd / /terminal）：此时保持窗口，不隐藏
+    if (m_mode == Mode::Terminal) return;
     hide();
 }
 
@@ -447,6 +506,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e) {
         return true;
 
     if (obj == m_search) {
+        // Ctrl+` 从搜索模式进入内联终端模式（退出键由 TerminalPane 内部拦截）
+        if ((key->modifiers() & Qt::ControlModifier) &&
+            key->key() == Qt::Key_QuoteLeft) {
+            enterTerminal();
+            return true;
+        }
         switch (key->key()) {
         case Qt::Key_Escape:
             hide();

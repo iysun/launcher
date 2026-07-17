@@ -16,3 +16,5 @@
 - [FilePlugin 同步遍历的访问上限兜底](notes/fileplugin-bounded-scan.md) — `@` 文件搜索为何用 kMaxVisit 封顶而非线程化
 - [Qt 样式表不支持 ::after / content](notes/qss-checkbox-checkmark.md) — 勾选框选中态对勾必须用 `image: url(...)` 提供真实图标，不能用 CSS 伪元素
 - [内嵌终端：为何用 libvterm 及集成坑](notes/embedded-terminal-libvterm.md) — 弃 ghostty 用 libvterm；CMake 须启用 C 语言否则 `.c` 被静默丢弃；ConPTY 的 NTDDI 门控；重复信号连接导致输入翻倍
+- [终端 Ctrl+[ 不能直接交给 libvterm 编码](notes/terminal-ctrl-csiu.md) — libvterm 对 `[`/`i`/`j`/`m` 强制走 CSI u（`ESC[91;5u`）而非控制字节，`Ctrl+[` 要特判成裸 Escape
+- [内联终端模式的两个坑](notes/terminal-inline-mode.md) — 退出键用 `Ctrl+\`` 不用 Esc（否则打残 vim）；退出键须在 TerminalView 消费前于 event filter 拦截

@@ -45,9 +45,11 @@ int main(int argc, char *argv[]) {
         QProcess::startDetached(QApplication::applicationFilePath());
         qApp->quit();
     });
-    // "/terminal"：打开内嵌终端窗口（libvterm + ConPTY），单例复用，懒启动 shell
+    // "/terminal"：在 launcher 内联展开终端模式（融合入口）；卡片морф为内嵌交互终端
+    cmd->addCommand("terminal", I18n::t("cmd.terminal"), [&win] { win.enterTerminal(); });
+    // "/termwin"：打开独立可缩放终端窗口（libvterm + ConPTY），单例复用，懒启动 shell
     auto *terminalWin = new TerminalWindow;
-    cmd->addCommand("terminal", I18n::t("cmd.terminal"), [terminalWin] {
+    cmd->addCommand("termwin", I18n::t("cmd.terminalWindow"), [terminalWin] {
         terminalWin->show();
         terminalWin->raise();
         terminalWin->activateWindow();
@@ -56,13 +58,8 @@ int main(int argc, char *argv[]) {
 
     win.addPlugin(cmd);
 
-    // ":" 前缀：在内置终端执行命令（`: ipconfig`）。复用同一终端单例。
-    win.addPlugin(new RunPlugin([terminalWin](const QString &c) {
-        terminalWin->show();
-        terminalWin->raise();
-        terminalWin->activateWindow();
-        terminalWin->runCommand(c);
-    }));
+    // ":" 前缀：在内联终端执行命令（`: ipconfig`）。进入终端模式并跑该命令。
+    win.addPlugin(new RunPlugin([&win](const QString &c) { win.enterTerminal(c); }));
 
     // 所有插件注册完毕后创建设置对话框（插件列表已完整）
     auto *settingsDialog = new SettingsDialog(settings, win.plugins());

@@ -67,6 +67,7 @@
         "cmd.datadir": "Open config / data directory",
         "cmd.restart": "Restart launcher",
         "cmd.settings": "Open settings",
-        "cmd.terminal": "Open terminal"
+        "cmd.terminal": "Open terminal (inline)",
+        "cmd.terminalWindow": "Open terminal window (standalone)"
     }
 }

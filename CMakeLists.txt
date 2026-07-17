@@ -48,6 +48,7 @@ qt_add_executable(launcher WIN32
     src/pty/ptyreader.cpp
     src/vt/terminalcore.cpp
     src/ui/terminalview.cpp
+    src/ui/terminalpane.cpp
     src/ui/terminalwindow.cpp
     resources/resources.qrc
 )
