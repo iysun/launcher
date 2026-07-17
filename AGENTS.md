@@ -182,8 +182,7 @@ src/
     ├── settingsdialog.h / .cpp  # 设置对话框（热键/自启/插件启停，Catppuccin 风格）
     ├── hotkeyedit.h / .cpp      # 热键录制控件（WH_KEYBOARD_LL 低级钩子，支持系统保留键）
     ├── helpdialog.h / .cpp      # 帮助对话框（快捷键/前缀/命令三区，替代 QMessageBox）
-    ├── terminalview.h / .cpp    # 终端渲染 + 输入（QPainter 逐格自绘，Qt 按键→libvterm 编码）
-    └── terminalwindow.h / .cpp  # 独立终端顶层窗口（/terminal 打开），持 ConPty+PtyReader，接线信号槽
+    └── terminalview.h / .cpp    # 终端渲染 + 输入（QPainter 逐格自绘，Qt 按键→libvterm 编码）
 tests/
 └── test_matcher.cpp            # Matcher 单测（Qt Test，ctest 运行）
 third_party/

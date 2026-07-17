@@ -8,7 +8,6 @@
 #include "plugins/runplugin.h"
 #include "plugins/webplugin.h"
 #include "ui/settingsdialog.h"
-#include "ui/terminalwindow.h"
 #include <QApplication>
 #include <QDesktopServices>
 #include <QProcess>
@@ -47,14 +46,6 @@ int main(int argc, char *argv[]) {
     });
     // "/terminal"：在 launcher 内联展开终端模式（融合入口）；卡片морф为内嵌交互终端
     cmd->addCommand("terminal", I18n::t("cmd.terminal"), [&win] { win.enterTerminal(); });
-    // "/termwin"：打开独立可缩放终端窗口（libvterm + ConPTY），单例复用，懒启动 shell
-    auto *terminalWin = new TerminalWindow;
-    cmd->addCommand("termwin", I18n::t("cmd.terminalWindow"), [terminalWin] {
-        terminalWin->show();
-        terminalWin->raise();
-        terminalWin->activateWindow();
-        terminalWin->startSession();
-    });
 
     win.addPlugin(cmd);
 

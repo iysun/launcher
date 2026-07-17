@@ -67,7 +67,6 @@
         "cmd.datadir": "打开配置 / 数据目录",
         "cmd.restart": "重启 launcher",
         "cmd.settings": "打开设置",
-        "cmd.terminal": "打开终端（内联）",
-        "cmd.terminalWindow": "打开终端窗口（独立）"
+        "cmd.terminal": "打开终端"
     }
 }

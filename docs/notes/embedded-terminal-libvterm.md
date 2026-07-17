@@ -1,6 +1,6 @@
 # 内嵌终端：为何用 libvterm，以及集成的几个坑
 
-`/terminal` 打开的内嵌终端 = **libvterm（VT 解析/屏幕状态内核）+ ConPTY（起 shell）+ QPainter 自绘 + 键盘编码**。相关文件：`src/vt/terminalcore.*`、`src/pty/conpty.*`、`src/pty/ptyreader.*`、`src/ui/terminalview.*`、`src/ui/terminalwindow.*`、`third_party/libvterm/`。
+`/terminal` 打开的内嵌终端 = **libvterm（VT 解析/屏幕状态内核）+ ConPTY（起 shell）+ QPainter 自绘 + 键盘编码**。相关文件：`src/vt/terminalcore.*`、`src/pty/conpty.*`、`src/pty/ptyreader.*`、`src/ui/terminalview.*`、`src/ui/terminalpane.*`、`src/ui/terminaltabs.*`、`third_party/libvterm/`。
 
 ## 为何不用 libghostty（最初的方案）
 

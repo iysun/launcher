@@ -1,6 +1,6 @@
 # 内联终端模式：两个易踩坑
 
-launcher 主窗口把终端从「独立顶层窗口」融合为「同一卡片内的终端模式」（`Ctrl+\`` 进/出）。
+launcher 主窗口把终端融合为「同一卡片内的终端模式」（`Ctrl+\`` 进/出），终端不再是独立顶层窗口。
 实现中有两处不显眼但会直接翻车的点，记录如下。
 
 ## 1. 退出模式键必须是 `Ctrl+\``，不能用 Esc
@@ -13,7 +13,7 @@ launcher 主窗口把终端从「独立顶层窗口」融合为「同一卡片�
 
 **现象**：`TerminalView::keyPressEvent` 把按键 raw 编码送 PTY——若在 `MainWindow` 层等按键冒泡上来再判断，`Ctrl+\`` 早已被 TerminalView 吞掉送进 shell，退不出来。
 
-**正确做法**：容器 `TerminalTabs` 在**每个 pane 的 `view()` 上装 event filter**（`pane->view()->installEventFilter(this)`），在 filter 里抢先捕获 `Ctrl+\`` → `emit exitRequested()` 并 `return true` 吞掉，不下送 PTY；宿主（`MainWindow`/`TerminalWindow`）连 `exitRequested`。进入方向则相反：搜索框获焦时由 `MainWindow::eventFilter` 捕获 `Ctrl+\`` → `enterTerminal()`。
+**正确做法**：容器 `TerminalTabs` 在**每个 pane 的 `view()` 上装 event filter**（`pane->view()->installEventFilter(this)`），在 filter 里抢先捕获 `Ctrl+\`` → `emit exitRequested()` 并 `return true` 吞掉，不下送 PTY；宿主 `MainWindow` 连 `exitRequested`。进入方向则相反：搜索框获焦时由 `MainWindow::eventFilter` 捕获 `Ctrl+\`` → `enterTerminal()`。
 
 > 引入多标签后，**所有终端模式管理键统一在 `TerminalTabs` 一处拦截**（`Ctrl+\`` 退出、`Ctrl+Shift+T/W`、`Ctrl+Tab`/`Ctrl+Shift+Tab`（后者部分平台来的是 `Key_Backtab`）、`Alt+1..9`）。`TerminalPane` 退化为纯会话 widget，不再自管任何快捷键/圆角遮罩——遮罩也上收到容器层（标签栏顶角 + 面板底角一次裁齐）。键位选 `Ctrl+Shift`/`Alt+数字` 而非 `Ctrl+T/W`，是为了不撞 shell 行编辑（transpose/delete-word）。
 
@@ -22,12 +22,6 @@ launcher 主窗口把终端从「独立顶层窗口」融合为「同一卡片�
 **现象/坑**：终端拿不到子进程的 cwd。尤其 **PowerShell 的 `Set-Location` 不改进程工作目录**（.NET 名坑），`NtQueryInformationProcess` 读 PEB 也读不到；pwsh 默认只把 OSC 标题设成 exe 全路径，不随 `cd` 变。
 
 **正确做法**：`terminalpane.cpp` 落盘一个 `pwsh-cwd-title.ps1`，启动 pwsh/powershell 时 `-NoExit -File` 加载它——脚本**包住已有 `prompt`**（先于 `-File` 加载的 profile/oh-my-posh 的 prompt 被捕获再包一层），每次刷新提示符 `$Host.UI.RawUI.WindowTitle = ...ProviderPath`。这样标题=cwd 全路径 → 现有 `titleChanged` → `TerminalTabs::shortTabLabel` 取最后一段即目录名。cmd.exe 无此机制，回退 `Terminal N`。
-
-## 4. 独立终端窗无系统标题栏（frameless + WM_NCHITTEST），标签栏与标题栏二合一
-
-`TerminalWindow` 用 `Qt::FramelessWindowHint` 去掉系统标题栏。**不另做标题栏**——`TerminalTabs` 开「窗口 chrome 模式」（`setStripAlwaysVisible(true)`）让标签栏常显兼作标题栏，窗口按钮经 `addStripTrailing()` 塞进标签栏右侧，二者同处一条（像 Windows Terminal）。
-
-无边框会丢失拖动/缩放，用 `nativeEvent` 拦 `WM_NCHITTEST`：四边/四角返回 `HTLEFT/HTTOP/...` 还原缩放；**只有标签栏里那块可拉伸空白（`m_dragArea`）返回 `HTCAPTION`** 还原拖动+双击最大化+Aero snap（全走系统）。这样标签/“+”/窗口按钮天然保持 `HTCLIENT` 可点，不用逐个排除按钮区域——命中判定收敛成一句 `TerminalTabs::pointInDragArea(globalPos)`。
 
 ## 附带约束（沿用既有终端栈）
 

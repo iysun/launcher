@@ -49,10 +49,8 @@ TerminalTabs::TerminalTabs(QWidget *parent) : QWidget(parent) {
     m_stripLay->setSpacing(0);
     m_stripLay->addWidget(m_bar, 0);
     m_stripLay->addWidget(plus, 0);
-    m_dragArea = new QWidget(m_strip); // 撑开的空白：窗口 chrome 模式下作拖动区
-    m_dragArea->setFocusPolicy(Qt::NoFocus);
-    m_stripLay->addWidget(m_dragArea, 1);
-    m_strip->hide(); // 单标签不显示，多于一个才亮出来（窗口 chrome 模式下常显）
+    m_stripLay->addStretch(1); // 右侧留白，标签左对齐
+    m_strip->hide();           // 单标签不显示，多于一个才亮出来
 
     m_stack = new QStackedWidget(this);
 
@@ -170,23 +168,8 @@ void TerminalTabs::closeTab(int index) {
 }
 
 void TerminalTabs::updateStripVisibility() {
-    // 窗口 chrome 模式常显（兼作标题栏）；否则单标签隐藏，回归干净单会话观感
-    m_strip->setVisible(m_stripAlways || m_bar->count() > 1);
-}
-
-void TerminalTabs::setStripAlwaysVisible(bool on) {
-    m_stripAlways = on;
-    updateStripVisibility();
-}
-
-void TerminalTabs::addStripTrailing(QWidget *w) {
-    w->setParent(m_strip);
-    m_stripLay->addWidget(w, 0); // 落在拖拽区（stretch=1）之后 → 贴最右
-}
-
-bool TerminalTabs::pointInDragArea(const QPoint &globalPos) const {
-    if (!m_strip->isVisible() || !m_dragArea) return false;
-    return m_dragArea->rect().contains(m_dragArea->mapFromGlobal(globalPos));
+    // 单标签隐藏，回归干净单会话观感；多于一个才亮出标签栏
+    m_strip->setVisible(m_bar->count() > 1);
 }
 
 void TerminalTabs::nextTab() {

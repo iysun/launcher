@@ -50,7 +50,6 @@ qt_add_executable(launcher WIN32
     src/ui/terminalview.cpp
     src/ui/terminalpane.cpp
     src/ui/terminaltabs.cpp
-    src/ui/terminalwindow.cpp
     resources/resources.qrc
 )
 
