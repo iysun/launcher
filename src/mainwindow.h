@@ -15,6 +15,7 @@ class QVBoxLayout;
 class ResultDelegate;
 class TerminalTabs;
 class UsageStore;
+class WrapPane;
 
 class MainWindow : public QWidget {
     Q_OBJECT
@@ -24,9 +25,13 @@ public:
     const QList<IPlugin *> &plugins() const { return m_plugins; }
 
     // 内联终端模式（融合入口）：把卡片切换为内嵌交互终端，键盘 raw 直送 shell。
-    // cmd 非空则进入后立即执行该命令。会话后台留存，再次进入即续。
-    void enterTerminal(const QString &cmd = QString());
+    // cmd 非空则进入后立即执行该命令。newTab 为真则强制新开标签。会话后台留存，再次进入即续。
+    void enterTerminal(const QString &cmd = QString(), bool newTab = false);
     void exitTerminal(); // 切回搜索模式（不 teardown 会话）
+
+    // Wrap 模式：launcher 卡片内一次性展示命令输出（QProcess，非 PTY）。
+    void runWrap(const QString &cmd);
+    void exitWrap();
 
 protected:
     void changeEvent(QEvent *e) override;
@@ -39,7 +44,7 @@ private slots:
     void toggle();
 
 private:
-    enum class Mode { Launch, Terminal }; // 搜索模式 / 内联终端模式
+    enum class Mode { Launch, Terminal, Wrap }; // 搜索 / 内联终端 / 一次性输出
 
     void  setupUi();
     void  showResults(const QList<ResultItem> &items);
@@ -56,6 +61,7 @@ private:
     QFrame          *m_card       = nullptr; // 圆角卡片容器（终端模式改其固定宽）
     QVBoxLayout     *m_cardLayout = nullptr; // 卡片内布局（终端 pane 懒挂于此）
     TerminalTabs    *m_term       = nullptr; // 内联终端多标签（懒建，跨模式切换后台留存）
+    WrapPane        *m_wrap       = nullptr; // 一次性命令输出（懒建，Wrap 模式）
     Mode             m_mode       = Mode::Launch;
 
     QLineEdit       *m_search;

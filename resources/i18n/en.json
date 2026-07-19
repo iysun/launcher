@@ -46,7 +46,8 @@
         "help.commandDesc": "Commands (bare / list all)",
         "help.fileSearch": "File search",
         "help.webSearch": "Web search (Google / Bing / Baidu / GitHub)",
-        "help.runCommand": "Run command in built-in terminal",
+        "help.runCommand": "Run command (Enter shows output, Ctrl+Enter opens terminal)",
+        "help.runPersistent": "Open persistent terminal in a new tab",
         "help.commandsLabel": "Commands",
 
         "hotkey.pressKeys": "(Press a key combo...)",
@@ -56,10 +57,20 @@
 
         "web.searchIn": "Search %1",
 
-        "run.hint": "Type a command, Enter to run in terminal",
-        "run.hintSub": "Enter opens the built-in terminal",
+        "run.hint": "Type a command; Enter shows output in launcher",
+        "run.hintSub": "Ctrl+Enter or :: prefix for persistent terminal",
         "run.execute": "Run: %1",
-        "run.executeSub": "Runs in the built-in terminal",
+        "run.executeSub": "Enter shows output · Ctrl+Enter opens terminal",
+
+        "runp.hint": "Type a command; Enter opens a new terminal tab",
+        "runp.hintSub": "Enter opens a new tab in terminal mode",
+        "runp.execute": "Terminal: %1",
+        "runp.executeSub": "New tab, persistent terminal session",
+
+        "wrap.running": "Running…",
+        "wrap.empty": "(no output)",
+        "wrap.failed": "Failed: %1",
+        "wrap.exitCode": "exit code",
 
         "cmd.help": "Show help",
         "cmd.quit": "Quit launcher",

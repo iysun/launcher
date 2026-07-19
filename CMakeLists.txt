@@ -39,6 +39,7 @@ qt_add_executable(launcher WIN32
     src/plugins/commandplugin.cpp
     src/plugins/fileplugin.cpp
     src/plugins/runplugin.cpp
+    src/plugins/runpersistentplugin.cpp
     src/plugins/webplugin.cpp
     src/ui/resultdelegate.cpp
     src/ui/settingsdialog.cpp
@@ -50,6 +51,7 @@ qt_add_executable(launcher WIN32
     src/ui/terminalview.cpp
     src/ui/terminalpane.cpp
     src/ui/terminaltabs.cpp
+    src/ui/wrappane.cpp
     resources/resources.qrc
 )
 

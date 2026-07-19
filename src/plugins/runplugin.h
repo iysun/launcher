@@ -2,19 +2,20 @@
 #include "plugin/iplugin.h"
 #include <functional>
 
-// 命令执行，":" 前缀触发：`: ipconfig` 回车 → 内置终端窗口弹出并执行该命令。
-// 与 CommandPlugin 同款解耦：runner 由 main.cpp 装配（打开终端 + 写入命令），
-// 插件不依赖任何 ui 头。frecency 由 MainWindow 按 action 键自动记录。
+// 命令执行，":" 前缀触发：`: ls` Enter → launcher 内一次性展示输出；
+// Ctrl+Enter → 新开标签进内联终端。runner 由 main.cpp 装配，插件不依赖 ui 头。
 class RunPlugin : public IPlugin {
 public:
     using Runner = std::function<void(const QString &cmd)>;
-    explicit RunPlugin(Runner runner) : m_runner(std::move(runner)) {}
+    explicit RunPlugin(Runner wrapRunner, Runner terminalRunner);
 
     QString           name() const override { return "Run"; }
     QString           triggerPrefix() const override { return ":"; }
     QList<ResultItem> query(const QString &keyword) override;
     void              execute(const ResultItem &item) override;
+    void              executeAlt(const ResultItem &item) override;
 
 private:
-    Runner m_runner;
+    Runner m_wrapRunner;
+    Runner m_terminalRunner;
 };

@@ -46,7 +46,8 @@
         "help.commandDesc": "命令（裸 / 列出全部）",
         "help.fileSearch": "文件搜索",
         "help.webSearch": "网页搜索（Google / Bing / Baidu / GitHub）",
-        "help.runCommand": "在内置终端执行命令",
+        "help.runCommand": "执行命令（Enter 展示输出，Ctrl+Enter 进终端）",
+        "help.runPersistent": "新开标签进持久终端",
         "help.commandsLabel": "命令",
 
         "hotkey.pressKeys": "(按下快捷键...)",
@@ -56,10 +57,20 @@
 
         "web.searchIn": "在 %1 中搜索",
 
-        "run.hint": "输入命令，回车在终端执行",
-        "run.hintSub": "回车打开内置终端",
+        "run.hint": "输入命令，Enter 在 launcher 内展示输出",
+        "run.hintSub": "Ctrl+Enter 或 :: 前缀进持久终端",
         "run.execute": "执行：%1",
-        "run.executeSub": "在内置终端中运行",
+        "run.executeSub": "Enter 展示输出 · Ctrl+Enter 进终端",
+
+        "runp.hint": "输入命令，回车在新标签页打开终端",
+        "runp.hintSub": "回车新开标签并进入终端模式",
+        "runp.execute": "终端执行：%1",
+        "runp.executeSub": "新开标签页，进入持久终端",
+
+        "wrap.running": "执行中…",
+        "wrap.empty": "（无输出）",
+        "wrap.failed": "执行失败：%1",
+        "wrap.exitCode": "退出码",
 
         "cmd.help": "显示帮助",
         "cmd.quit": "退出 launcher",

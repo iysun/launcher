@@ -197,6 +197,8 @@ void TerminalTabs::startSession() {
     }
 }
 
+void TerminalTabs::openNewTab() { newTab(); }
+
 void TerminalTabs::runCommand(const QString &cmd) {
     if (m_stack->count() == 0) newTab();
     if (auto *p = currentPane()) {

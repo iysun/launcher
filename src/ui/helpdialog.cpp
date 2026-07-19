@@ -132,6 +132,7 @@ void HelpDialog::buildLayout() {
     cl->addWidget(row("@", I18n::t("help.fileSearch"), content));
     cl->addWidget(row("?", I18n::t("help.webSearch"), content));
     cl->addWidget(row(":", I18n::t("help.runCommand"), content));
+    cl->addWidget(row("::", I18n::t("help.runPersistent"), content));
 
     cl->addWidget(separator(content));
 

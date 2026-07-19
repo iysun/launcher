@@ -5,6 +5,7 @@
 #include "core/usagestore.h"
 #include "ui/resultdelegate.h"
 #include "ui/terminaltabs.h"
+#include "ui/wrappane.h"
 #include <algorithm>
 #include <QApplication>
 #include <QCursor>
@@ -31,6 +32,7 @@ static constexpr int kMaxItems        = 8;
 static constexpr int kQueryDebounceMs = 100; // 停止输入后再查询，避免逐键查询
 static constexpr int kTermW           = 900; // 终端模式卡片宽
 static constexpr int kTermH           = 520; // 终端模式 pane 高
+static constexpr int kWrapOutH        = 280; // Wrap 输出区高度
 
 MainWindow::MainWindow(AppSettings *settings, QWidget *parent)
     : QWidget(parent), m_settings(settings) {
@@ -181,6 +183,8 @@ void MainWindow::setupUi() {
 
 void MainWindow::toggle() {
     if (isVisible()) {
+        if (m_mode == Mode::Wrap)
+            exitWrap();
         hide();
     } else {
         centerOnScreen();
@@ -189,6 +193,8 @@ void MainWindow::toggle() {
         activateWindow();
         if (m_mode == Mode::Terminal && m_term) {
             m_term->focusTerminal(); // 终端模式：唤起即回到终端，不动搜索框
+        } else if (m_mode == Mode::Wrap) {
+            m_search->setFocus();
         } else {
             m_search->clear();
             m_search->setFocus();
@@ -205,6 +211,10 @@ void MainWindow::centerOnScreen() {
     if (m_mode == Mode::Terminal) {
         move(geo.left() + (geo.width() - kTermW) / 2,
              geo.top() + (geo.height() - kTermH) / 2);
+    } else if (m_mode == Mode::Wrap) {
+        const int h = kSearchH + kWrapOutH;
+        move(geo.left() + (geo.width() - kWidth) / 2,
+             geo.top() + (geo.height() - h) / 2);
     } else {
         move(geo.left() + (geo.width() - kWidth) / 2, geo.top() + geo.height() / 4);
     }
@@ -220,7 +230,10 @@ void MainWindow::changeEvent(QEvent *e) {
 
 // ── 内联终端模式 ──────────────────────────────────────────────
 
-void MainWindow::enterTerminal(const QString &cmd) {
+void MainWindow::enterTerminal(const QString &cmd, bool newTab) {
+    if (m_mode == Mode::Wrap)
+        exitWrap();
+
     if (!m_term) { // 懒建：首次进入才创建标签容器并挂进卡片
         m_term = new TerminalTabs(m_card);
         m_term->setCornerRadius(10); // 与卡片 border-radius 对齐，避免不透明终端糊掉圆角
@@ -243,9 +256,52 @@ void MainWindow::enterTerminal(const QString &cmd) {
     raise();
     activateWindow();
 
-    m_term->startSession(); // 幂等：已在跑则续用
-    if (!cmd.isEmpty()) m_term->runCommand(cmd);
+    if (newTab)
+        m_term->openNewTab();
+    else
+        m_term->startSession();
+    if (!cmd.isEmpty())
+        m_term->runCommand(cmd);
     m_term->focusTerminal();
+}
+
+void MainWindow::runWrap(const QString &cmd) {
+    if (cmd.isEmpty())
+        return;
+
+    if (!m_wrap) {
+        m_wrap = new WrapPane(m_card);
+        m_cardLayout->addWidget(m_wrap);
+        m_wrap->hide();
+    }
+
+    m_mode = Mode::Wrap;
+    m_list->hide();
+    m_card->setFixedWidth(kWidth);
+    m_wrap->setFixedHeight(kWrapOutH);
+    m_wrap->show();
+
+    if (!isVisible())
+        show();
+    centerOnScreen();
+    raise();
+    activateWindow();
+
+    m_wrap->run(cmd);
+    m_search->setFocus();
+}
+
+void MainWindow::exitWrap() {
+    if (m_mode != Mode::Wrap)
+        return;
+    m_mode = Mode::Launch;
+    if (m_wrap) {
+        m_wrap->cancel();
+        m_wrap->hide();
+    }
+    m_search->clear();
+    m_search->setFocus();
+    centerOnScreen();
 }
 
 void MainWindow::exitTerminal() {
@@ -414,14 +470,15 @@ void MainWindow::activate(QListWidgetItem *item, bool alt) {
     auto result = item->data(Qt::UserRole).value<ResultItem>();
     if (result.owner) { // 只让产出该结果的插件执行，互不串扰
         if (alt) {
-            result.owner->executeAlt(result); // Ctrl+Enter：次级动作（不计入 frecency）
+            result.owner->executeAlt(result);
         } else {
             result.owner->execute(result);
-            m_usage->recordUse(result.action); // 记录使用，供 frecency 排序
         }
+        m_usage->recordUse(result.action);
     }
-    // execute 可能已切入内联终端模式（:cmd / /terminal）：此时保持窗口，不隐藏
-    if (m_mode == Mode::Terminal) return;
+    // execute 可能已切入内联终端 / wrap 模式：此时保持窗口，不隐藏
+    if (m_mode == Mode::Terminal || m_mode == Mode::Wrap)
+        return;
     hide();
 }
 
@@ -504,6 +561,11 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e) {
 
     if (handleEmacsKey(key)) // Emacs 键位对搜索框/列表两种焦点都生效
         return true;
+
+    if (m_mode == Mode::Wrap && key->key() == Qt::Key_Escape) {
+        exitWrap();
+        return true;
+    }
 
     if (obj == m_search) {
         // Ctrl+` 从搜索模式进入内联终端模式（退出键由 TerminalPane 内部拦截）

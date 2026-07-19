@@ -6,6 +6,7 @@
 #include "plugins/commandplugin.h"
 #include "plugins/fileplugin.h"
 #include "plugins/runplugin.h"
+#include "plugins/runpersistentplugin.h"
 #include "plugins/webplugin.h"
 #include "ui/settingsdialog.h"
 #include <QApplication>
@@ -49,8 +50,13 @@ int main(int argc, char *argv[]) {
 
     win.addPlugin(cmd);
 
-    // ":" 前缀：在内联终端执行命令（`: ipconfig`）。进入终端模式并跑该命令。
-    win.addPlugin(new RunPlugin([&win](const QString &c) { win.enterTerminal(c); }));
+    // "::" 前缀：新开标签进持久终端；":" 前缀：Enter=wrap 展示，Ctrl+Enter=新开标签进终端
+    win.addPlugin(new RunPersistentPlugin([&win](const QString &c) {
+        win.enterTerminal(c, true);
+    }));
+    win.addPlugin(new RunPlugin(
+        [&win](const QString &c) { win.runWrap(c); },
+        [&win](const QString &c) { win.enterTerminal(c, true); }));
 
     // 所有插件注册完毕后创建设置对话框（插件列表已完整）
     auto *settingsDialog = new SettingsDialog(settings, win.plugins());

@@ -16,6 +16,7 @@ public:
     explicit TerminalTabs(QWidget *parent = nullptr);
 
     void startSession();                 // 无标签则建一个并起会话；否则确保当前会话在跑
+    void openNewTab();                   // 强制新建标签并切换过去（:: / Ctrl+Enter 持久终端）
     void runCommand(const QString &cmd); // 在当前标签执行（无标签先建一个）
     void focusTerminal();                // 聚焦当前 pane
     void teardown();                     // teardown 所有 pane（宿主关闭/退出时）
