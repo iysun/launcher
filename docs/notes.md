@@ -18,3 +18,5 @@
 - [内嵌终端：为何用 libvterm 及集成坑](notes/embedded-terminal-libvterm.md) — 弃 ghostty 用 libvterm；CMake 须启用 C 语言否则 `.c` 被静默丢弃；ConPTY 的 NTDDI 门控；重复信号连接导致输入翻倍
 - [终端 Ctrl+[ 不能直接交给 libvterm 编码](notes/terminal-ctrl-csiu.md) — libvterm 对 `[`/`i`/`j`/`m` 强制走 CSI u（`ESC[91;5u`）而非控制字节，`Ctrl+[` 要特判成裸 Escape
 - [内联终端模式的两个坑](notes/terminal-inline-mode.md) — 退出键用 `Ctrl+\`` 不用 Esc（否则打残 vim）；退出键须在 TerminalView 消费前于 event filter 拦截
+
+> 跨平台移植路线图与待办（非踩坑，单列）：[docs/cross-platform.md](cross-platform.md) — Windows/Linux/macOS 现状矩阵 + 分子系统 TODO + 分阶段路线。
