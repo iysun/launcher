@@ -1,153 +1,112 @@
 #include "wrappane.h"
 #include "core/i18n.h"
 #include "core/theme.h"
+#include "pty/conpty.h"
+#include "pty/ptyreader.h"
+#include "ui/terminalview.h"
 
-#include <QDir>
-#include <QFont>
-#include <QPlainTextEdit>
-#include <QProcess>
-#include <QRegularExpression>
+#include <QByteArray>
 #include <QStandardPaths>
 #include <QVBoxLayout>
 
 namespace {
-QString stripAnsiEscapes(QString text) {
-    // CSI: ESC [ … final byte；以及 ESC 丢失时残留的 [33;1m 等
-    static const QRegularExpression kCsi(
-        QStringLiteral("\x1B\\[[0-9;]*[ -/]*[@-~]"));
-    static const QRegularExpression kOrphanCsi(QStringLiteral("\\[[0-9;]*m"));
-    text.replace(kCsi, QString());
-    text.replace(kOrphanCsi, QString());
-    return text;
+// 常驻 shell 命令行：pwsh(7) > powershell(5.1) > cmd。-NoExit 保持会话常驻（命令经
+// stdin 逐条送入，避免每条命令新起重进程）；-NoLogo 去横幅、-NoProfile 跳过 profile
+// （无噪声、启动快）；-Command 把提示符设空，让输出干净（每条命令前另行清屏）。
+// ConPTY 伪控制台让 pwsh 的 $PSStyle 默认 Host 渲染 → Get-ChildItem 等自动带 ANSI 颜色。
+QString shellCommandLine() {
+    QString exe = QStandardPaths::findExecutable(QStringLiteral("pwsh"));
+    if (exe.isEmpty())
+        exe = QStandardPaths::findExecutable(QStringLiteral("powershell"));
+    if (!exe.isEmpty())
+        return QString(QStringLiteral(
+                   "\"%1\" -NoLogo -NoProfile -NoExit -Command \""
+                   "if ($PSStyle) { $PSStyle.OutputRendering = 'Ansi' }; "
+                   "function prompt { '' }\""))
+            .arg(exe);
+    return QStringLiteral("cmd.exe"); // cmd 无空提示符处理，回退时会显示 C:\..> 提示符
 }
 
-QString shellProgram() {
-    if (!QStandardPaths::findExecutable(QStringLiteral("pwsh")).isEmpty())
-        return QStringLiteral("pwsh");
-    if (!QStandardPaths::findExecutable(QStringLiteral("powershell")).isEmpty())
-        return QStringLiteral("powershell");
-    return QStringLiteral("cmd");
-}
-
-QStringList shellArguments(const QString &program, const QString &cmd) {
-    if (program == QStringLiteral("cmd"))
-        return {QStringLiteral("/c"), cmd};
-    // pwsh/powershell：PlainText 避免目录列表等自带 ANSI 着色
-    const QString plain =
-        QStringLiteral("$PSStyle.OutputRendering='PlainText'; ") + cmd;
-    return {QStringLiteral("-NoProfile"), QStringLiteral("-NonInteractive"),
-            QStringLiteral("-Command"), plain};
-}
+// 清 scrollback + 清屏 + 光标归位：直接喂给 view（不经 shell，故不产生回显）。
+// CSI 3J → TerminalCore::sinkSbClear 清历史；CSI 2J 清屏；CSI H 归位。
+const QByteArray kClearSeq = QByteArrayLiteral("\x1b[3J\x1b[2J\x1b[H");
 } // namespace
 
-WrapPane::WrapPane(QWidget *parent) : QWidget(parent) {
-    auto *root = new QVBoxLayout(this);
-    root->setContentsMargins(0, 0, 0, 0);
-    root->setSpacing(0);
+WrapPane::WrapPane(QWidget *parent) : QWidget(parent), m_pty(std::make_unique<ConPty>()) {
+    m_layout = new QVBoxLayout(this);
+    m_layout->setContentsMargins(0, 0, 0, 0);
+    m_layout->setSpacing(0);
 
-    m_output = new QPlainTextEdit(this);
-    m_output->setReadOnly(true);
-    m_output->setLineWrapMode(QPlainTextEdit::WidgetWidth);
-    m_output->setFocusPolicy(Qt::StrongFocus);
-    m_output->setFont(QFont(QStringLiteral("Consolas")));
-    m_output->setStyleSheet(QString(R"(
-        QPlainTextEdit {
-            background: transparent;
-            color: %1;
-            border: none;
-            border-top: 1px solid %2;
-            font-size: 13px;
-            padding: 8px 12px;
-        }
-    )")
-                                 .arg(Theme::c("text"), Theme::c("surface")));
+    m_view = new TerminalView(this);
+    m_view->setFocusPolicy(Qt::NoFocus); // 只读：焦点始终留搜索框（REPL 输入行）
+    m_layout->addWidget(m_view);
 
-    root->addWidget(m_output);
+    // 网格尺寸变化 → ConPTY resize（ConPTY 参数是 cols,rows）。view/pty 均随 pane 长存，
+    // 这条连接只连一次。
+    connect(m_view, &TerminalView::resized, this, [this](int r, int c) {
+        m_pty->resize(static_cast<short>(c), static_cast<short>(r));
+    });
+
     setStyleSheet(QString("QWidget { background: %1; }").arg(Theme::c("bg")));
 }
 
+WrapPane::~WrapPane() { teardownSession(); }
+
+void WrapPane::startSession() {
+    if (m_started)
+        return;
+
+    const int rows = m_view->gridRows();
+    const int cols = m_view->gridCols();
+    if (!m_pty->start(shellCommandLine(), static_cast<short>(cols), static_cast<short>(rows)))
+        return;
+
+#ifdef Q_OS_WIN
+    m_reader = new PtyReader(this);
+    m_reader->setReadHandle(m_pty->readHandle());
+    // PTY 输出 → 视图（跨线程 Queued）。reader 每次起会话新建，故这些连接放这里。
+    connect(m_reader, &PtyReader::bytesRead, m_view, &TerminalView::onBytes);
+    connect(m_reader, &PtyReader::eof, this, &WrapPane::onEof);
+    m_reader->start();
+#endif
+    m_started = true;
+}
+
 void WrapPane::run(const QString &cmd) {
-    cancel();
-    m_output->clear();
-    m_output->setPlainText(I18n::t("wrap.running"));
-    startProcess(cmd.trimmed());
-}
-
-void WrapPane::cancel() {
-    if (!m_proc)
+    const QString trimmed = cmd.trimmed();
+    if (trimmed.isEmpty())
         return;
-    m_proc->disconnect(this);
-    if (m_proc->state() != QProcess::NotRunning) {
-        m_proc->kill();
-        m_proc->waitForFinished(1000);
+
+    startSession(); // 幂等；仅首条命令时真正启动常驻会话
+    if (!m_started) {
+        m_view->onBytes((I18n::t("wrap.failed").arg(trimmed) + "\r\n").toUtf8());
+        emit finished();
+        return;
     }
-    m_proc->deleteLater();
-    m_proc = nullptr;
+
+    m_view->onBytes(kClearSeq); // 清屏，只显示本条命令的输出
+    const QByteArray bytes = trimmed.toUtf8() + "\r";
+    m_pty->write(bytes.constData(), bytes.size());
 }
 
-bool WrapPane::isRunning() const {
-    return m_proc && m_proc->state() != QProcess::NotRunning;
-}
+void WrapPane::cancel() { teardownSession(); }
 
-void WrapPane::startProcess(const QString &cmd) {
-    const QString program = shellProgram();
-    m_proc                = new QProcess(this);
-    m_proc->setProgram(program);
-    m_proc->setArguments(shellArguments(program, cmd));
-    m_proc->setWorkingDirectory(QDir::homePath());
-    m_proc->setProcessChannelMode(QProcess::MergedChannels);
-    auto env = QProcessEnvironment::systemEnvironment();
-    env.insert(QStringLiteral("NO_COLOR"), QStringLiteral("1"));
-    env.insert(QStringLiteral("TERM"), QStringLiteral("dumb"));
-    m_proc->setProcessEnvironment(env);
+bool WrapPane::isRunning() const { return m_started; }
 
-    connect(m_proc, &QProcess::readyRead, this, &WrapPane::onReadyRead);
-    connect(m_proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
-            &WrapPane::onProcessFinished);
-    connect(m_proc, &QProcess::errorOccurred, this, &WrapPane::onProcessError);
-
-    m_output->clear();
-    m_proc->start();
-}
-
-void WrapPane::onReadyRead() {
-    if (!m_proc)
-        return;
-    appendOutput(m_proc->readAll());
-}
-
-void WrapPane::appendOutput(const QByteArray &bytes) {
-    if (bytes.isEmpty())
-        return;
-    if (m_output->toPlainText() == I18n::t("wrap.running"))
-        m_output->clear();
-    m_output->moveCursor(QTextCursor::End);
-    m_output->insertPlainText(stripAnsiEscapes(QString::fromUtf8(bytes)));
-    m_output->moveCursor(QTextCursor::End);
-}
-
-void WrapPane::onProcessFinished(int exitCode, QProcess::ExitStatus status) {
-    Q_UNUSED(status);
-    if (m_proc)
-        appendOutput(m_proc->readAll());
-    const QString cleaned = stripAnsiEscapes(m_output->toPlainText());
-    if (cleaned != m_output->toPlainText())
-        m_output->setPlainText(cleaned);
-    if (m_output->toPlainText().trimmed().isEmpty())
-        m_output->setPlainText(I18n::t("wrap.empty"));
-    else if (exitCode != 0) {
-        m_output->appendPlainText(
-            QStringLiteral("\n[%1 %2]").arg(I18n::t("wrap.exitCode")).arg(exitCode));
+void WrapPane::teardownSession() {
+    if (m_reader) {
+        m_reader->requestStop();
+        m_pty->stop();        // 关句柄，解锁阻塞的 ReadFile
+        m_reader->wait(3000); // join
+        m_reader->deleteLater();
+        m_reader = nullptr;
+    } else {
+        m_pty->stop();
     }
-    m_proc = nullptr;
-    emit finished();
+    m_started = false;
 }
 
-void WrapPane::onProcessError() {
-    if (!m_proc)
-        return;
-    m_output->setPlainText(
-        I18n::t("wrap.failed").arg(m_proc->errorString()));
-    m_proc = nullptr;
+void WrapPane::onEof() {
+    teardownSession(); // 常驻 shell 退出（如 exit）；保留 view 已渲染内容
     emit finished();
 }

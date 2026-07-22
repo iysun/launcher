@@ -20,6 +20,9 @@ QString ensureCwdTitleHook() {
     QDir().mkpath(dir);
     const QString path = dir + QStringLiteral("/pwsh-cwd-title.ps1");
     static const char *kScript =
+        // 强制 pwsh 输出 ANSI 颜色：Host 渲染在自建 ConPTY 里会判定为不支持 VT 而剥色，
+        // 显式设 Ansi 让 Get-ChildItem 等无条件带色（5.1 无 $PSStyle，if 守卫安全跳过）。
+        "if ($PSStyle) { $PSStyle.OutputRendering = 'Ansi' }\r\n"
         "# launcher 注入：提示符刷新时把窗口标题设为当前目录（供多标签取最后一层目录名）。\r\n"
         "# 包住已有 prompt（如 oh-my-posh），不破坏其渲染。\r\n"
         "$global:__lnPrevPrompt = $function:prompt\r\n"

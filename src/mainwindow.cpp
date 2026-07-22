@@ -211,11 +211,9 @@ void MainWindow::centerOnScreen() {
     if (m_mode == Mode::Terminal) {
         move(geo.left() + (geo.width() - kTermW) / 2,
              geo.top() + (geo.height() - kTermH) / 2);
-    } else if (m_mode == Mode::Wrap) {
-        const int h = kSearchH + kWrapOutH;
-        move(geo.left() + (geo.width() - kWidth) / 2,
-             geo.top() + (geo.height() - h) / 2);
     } else {
+        // Launch 与 Wrap 共用锚点：输入框固定在屏幕上 1/4 处，Wrap 输出向下展开，
+        // 不把整窗重新居中（否则输入框会随卡片增高而下跳）。
         move(geo.left() + (geo.width() - kWidth) / 2, geo.top() + geo.height() / 4);
     }
 }
@@ -288,20 +286,29 @@ void MainWindow::runWrap(const QString &cmd) {
     activateWindow();
 
     m_wrap->run(cmd);
+    m_search->setText(QStringLiteral(":")); // REPL 提示符复位，接着输入下一条命令
     m_search->setFocus();
 }
 
-void MainWindow::exitWrap() {
-    if (m_mode != Mode::Wrap)
-        return;
+// 离开 Wrap 回到 Launch。keepText=false：清空搜索框（Esc/主动退出）；
+// keepText=true：保留当前文本（删掉 ":" 前缀后无缝转为普通搜索）。
+void MainWindow::leaveWrap(bool keepText) {
     m_mode = Mode::Launch;
     if (m_wrap) {
         m_wrap->cancel();
         m_wrap->hide();
     }
-    m_search->clear();
+    m_card->setFixedWidth(kWidth);
+    if (!keepText)
+        m_search->clear();
     m_search->setFocus();
     centerOnScreen();
+}
+
+void MainWindow::exitWrap() {
+    if (m_mode != Mode::Wrap)
+        return;
+    leaveWrap(/*keepText=*/false);
 }
 
 void MainWindow::exitTerminal() {
@@ -319,6 +326,14 @@ void MainWindow::exitTerminal() {
 // ── 搜索与结果 ────────────────────────────────────────────────
 
 void MainWindow::onTextChanged(const QString &text) {
+    // Wrap 模式：搜索框是命令输入行（REPL）。以 ":" 开头＝正在编辑命令，不触发结果查询
+    // （避免结果列表弹出叠到 WrapPane 上；回车重跑由 eventFilter 的 Wrap 分支处理）；
+    // 一旦 ":" 前缀被删掉，则离开 Wrap、保留当前文本，无缝转回普通搜索。
+    if (m_mode == Mode::Wrap) {
+        if (text.startsWith(QLatin1Char(':')))
+            return;
+        leaveWrap(/*keepText=*/true);
+    }
     m_pendingKeyword = text.trimmed();
     if (m_pendingKeyword.isEmpty()) {
         m_queryTimer->stop();
@@ -332,7 +347,8 @@ void MainWindow::onTextChanged(const QString &text) {
 // 防抖到期后执行。同步插件（应用/命令）即时收集并展示；异步插件（文件搜索）派发到
 // 工作线程，结果回来再合并重排。每次查询自增代次，异步回调据此丢弃过期结果。
 void MainWindow::runQuery() {
-    if (!isVisible()) return; // 窗口已隐藏则无需查询
+    if (!isVisible()) return;         // 窗口已隐藏则无需查询
+    if (m_mode == Mode::Wrap) return; // Wrap 模式不查询（防御：搜索框此时是命令输入行）
 
     const QString kw = m_pendingKeyword;
     if (kw.isEmpty()) {
@@ -564,6 +580,21 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e) {
 
     if (m_mode == Mode::Wrap && key->key() == Qt::Key_Escape) {
         exitWrap();
+        return true;
+    }
+
+    // Wrap 模式：搜索框即命令输入行。回车原地重跑当前命令（剥掉可见的 ":" 前缀）；
+    // Ctrl+Enter 把当前命令送入内联终端。不再走结果列表。
+    if (m_mode == Mode::Wrap && obj == m_search &&
+        (key->key() == Qt::Key_Return || key->key() == Qt::Key_Enter)) {
+        QString t = m_search->text().trimmed();
+        if (t.startsWith(QLatin1Char(':'))) t = t.mid(1).trimmed();
+        if (!t.isEmpty()) {
+            if (key->modifiers() & Qt::ControlModifier)
+                enterTerminal(t, true);
+            else
+                runWrap(t);
+        }
         return true;
     }
 

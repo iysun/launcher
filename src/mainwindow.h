@@ -29,9 +29,11 @@ public:
     void enterTerminal(const QString &cmd = QString(), bool newTab = false);
     void exitTerminal(); // 切回搜索模式（不 teardown 会话）
 
-    // Wrap 模式：launcher 卡片内一次性展示命令输出（QProcess，非 PTY）。
+    // Wrap 模式：launcher 卡片内一次性展示命令输出（ConPTY + TerminalView 渲染，带色 VT，
+    // 只读不可交互）。搜索框在此模式下当作命令输入行（REPL），回车原地重跑。
     void runWrap(const QString &cmd);
     void exitWrap();
+    void leaveWrap(bool keepText); // 离开 Wrap 回 Launch；keepText 决定是否清空搜索框
 
 protected:
     void changeEvent(QEvent *e) override;
