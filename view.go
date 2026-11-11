@@ -52,6 +52,9 @@ func (l *launcher) view(c *ui.Context) {
 			in := ui.TextInputBase(c, &l.query).Bind(&l.input).Grow(1).FontSize(22).
 				Placeholder("输入关键词搜索, /help 获取帮助").Label("搜索")
 			in.OnTextKey(func(k ui.TextKey) bool { return l.onTextKey(in, k) })
+			if in.Submitted() && l.mode == modeSearch {
+				l.flushAndOpen(false)
+			}
 			if in.Changed() {
 				if l.mode == modeWrap {
 					if !strings.HasPrefix(l.query, ":") {
@@ -62,6 +65,9 @@ func (l *launcher) view(c *ui.Context) {
 				}
 			}
 		})
+		if l.status != "" && l.mode == modeSearch {
+			ui.Text(c, l.status).FontSize(12).TextColor(t.Danger).Padding(0, 18, 8, 18)
+		}
 		if l.mode == modeWrap {
 			l.wrapOutput(c)
 			return

@@ -50,8 +50,10 @@ func (l *launcher) runWrap(cmd string) {
 		})
 		if err != nil {
 			log.Print(err)
+			l.status = "无法启动终端：" + err.Error()
 			return
 		}
+		l.status = ""
 		l.terms.wrap = t
 	}
 	l.mode = modeWrap
@@ -121,8 +123,13 @@ func (l *launcher) openTab(cmd string) {
 	})
 	if err != nil {
 		log.Print(err)
+		l.status = "无法启动终端：" + err.Error()
+		if len(l.terms.tabs) == 0 && l.mode == modeTerm {
+			l.exitTerminal()
+		}
 		return
 	}
+	l.status = ""
 	l.terms.tabs = append(l.terms.tabs, &termTab{
 		term: t,
 		name: fmt.Sprintf("Terminal %d", seq),

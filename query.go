@@ -8,6 +8,7 @@ import (
 
 	"github.com/iysun/launcher/internal/core"
 	"github.com/iysun/launcher/internal/plugin"
+	"github.com/iysun/launcher/internal/plugins"
 )
 
 func (l *launcher) clearResults() {
@@ -160,7 +161,11 @@ func (l *launcher) activate(alt bool) {
 		return
 	}
 	item := l.results[l.chosen]
-	l.panel.Hide()
+	switch item.Owner.(type) {
+	case plugins.Run, plugins.RunPersistent:
+	default:
+		l.panel.Hide()
+	}
 	if item.Owner == nil {
 		return
 	}

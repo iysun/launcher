@@ -73,6 +73,7 @@ type launcher struct {
 	trayClick   time.Time
 	recording   bool
 	mode        int
+	status      string
 	terms       termState
 }
 
