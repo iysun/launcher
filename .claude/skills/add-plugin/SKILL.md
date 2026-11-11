@@ -1,60 +1,24 @@
 ---
 name: add-plugin
-description: 为 launcher 新增一个搜索插件。当用户要添加新插件、新触发能力（如计算器/文件搜索/网页搜索等以某前缀触发的功能）时使用——按 IPlugin 模式生成骨架、注册到 CMake 与 main.cpp、走构建验证、并判断是否更新文档，贯穿一条流水线。
+description: 为 launcher 新增一个搜索插件。当用户要添加新插件、新触发能力（如计算器，以某前缀触发）时使用——按 Plugin 接口生成骨架、在 main.go 注册、构建验证，并判断是否更新文档。
 ---
 
-# add-plugin — 新插件开发 Loop
-
-把"加一个插件"的零散步骤固化成端到端流水线，避免漏掉注册或构建验证。
+# add-plugin — 新插件
 
 ## 输入（先问清）
 
-- **插件类名**：如 `CalcPlugin`（PascalCase）。文件名取小写：`calcplugin.h/.cpp`。
-- **触发方式**：前缀触发（如 `=` 计算、`/` 文件、`?` 网页）还是无前缀（始终参与查询，如应用搜索）。
-- **一句话功能**：query 返回什么、execute 做什么。
+- 插件名：作为 `Name()` 的稳定 id，例如 `Calc`。设置里用这个字符串记住启用状态。
+- 触发方式：前缀（如 `=`）或全局（空前缀）。
+- query 返回什么、Execute 做什么、要不要 Ctrl+Enter。
 
 ## 流水线
 
-### 1) 生成骨架 `src/plugins/<name>.h` / `.cpp`
-
-实现 `IPlugin` 三个纯虚函数（接口见 `src/plugin/iplugin.h`，数据结构见 `src/plugin/resultitem.h`）。可参考现有 `src/plugins/appplugin.h/.cpp`。
-
-约束：
-- **前缀触发**：重写 `triggerPrefix()` 返回前缀（如 `"="`）。MainWindow 仅在输入以此前缀开头时调用本插件，并**已剥离前缀**传入 `query` —— 插件无需自己判断/剥离前缀。全局插件不重写（默认空串）。
-- **打分与排序**：用 `Matcher::score`（`src/core/matcher.h`）算分填入 `ResultItem::score`；排序、截断（≤8 条）由 MainWindow 跨插件统一处理，插件**不要**自己排序或限制条数。
-- **execute 归属**：`execute()` 只会对产出该结果的插件触发（`owner` 由 MainWindow 标记），插件间互不串扰；`execute()` **不能阻塞 UI 线程**（耗时操作异步处理）。
-- **次级动作（可选）**：重写 `executeAlt()` 处理 `Ctrl+Enter`（如复制路径/打开所在目录），默认无操作。
-- 跨平台差异用 `#ifdef Q_OS_WIN` / `#else` 隔离。
-
-头文件骨架：
-
-```cpp
-#pragma once
-#include "plugin/iplugin.h"
-
-class MyPlugin : public IPlugin {
-public:
-    QString           name()  const override { return "MyPlugin"; }
-    QString           triggerPrefix() const override { return "="; }  // 全局插件则省略
-    QList<ResultItem> query(const QString &keyword) override;
-    void              execute(const ResultItem &item) override;
-};
-```
-
-### 2) 注册到构建
-
-把新的 `.cpp` 加入 `CMakeLists.txt` 的 `qt_add_executable(launcher ...)` 源文件列表（与 `src/plugins/appplugin.cpp` 并列）。
-
-### 3) 注册到运行时
-
-在 `src/main.cpp` 仿照 `win.addPlugin(new AppPlugin);` 增加 `win.addPlugin(new MyPlugin);`（记得 `#include` 新头文件）。
-
-### 4) 构建验证
-
-走 `/build` 构建-修复循环，编译通过后用 `/runapp` 实际触发该插件确认行为。
-
-### 5) 文档同步判断（判断式，非强制）
-
-- 该插件实现了 `docs/features.md` 里的某个**待实现**项 → 把它从 `docs/features/` 对应文件迁移到「已完成」，并更新索引。
-- 过程中踩到**新坑** → 在 `docs/notes/` 加一篇并在 `docs/notes.md` 索引补一行。
-- 纯骨架、未改变功能边界 → 无需动文档。
+1. 在 `internal/plugins/` 新建文件，实现 `plugin.Plugin`（见 `internal/plugin/plugin.go`）。参考 `internal/plugins/web.go`。
+2. 约束：
+   - 前缀由主窗口剥离后再传入 `Query`。
+   - 用 `core.Score` 填写 `Score`。不要自己排序，也不要截到 8 条；主窗口会做。
+   - `Async() == true` 时 `Query` 在别的 goroutine 上跑，不能调用 UI。
+   - `Execute` 只会被自己产出的结果调用。
+3. 在 `main.go` 里把插件放进 `l.plugs`。顺序靠前的前缀先被识别。
+4. `go test ./internal/core/` 和 `go build -ldflags="-H windowsgui" -o launcher.exe .` 通过后，用 `/runapp` 的方式实际触发一次。
+5. 功能边界变了就更新 `docs/features.md`。纯骨架不用改文档。

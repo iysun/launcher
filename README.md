@@ -1,64 +1,48 @@
 # Launcher
 
-A lightweight cross-platform application launcher (Windows & Linux), inspired by uTools and PowerToys Run.
+轻量启动器，参考 uTools 和 PowerToys Run。界面用 [mygo](https://github.com/egoist/mygo) 的原生 UI，逻辑用 Go。
 
-Built with **Qt6 + C++17**.
+## 功能
 
-## Features
+- 全局热键唤起 / 隐藏（默认 `Alt+Space`，可在设置里改）
+- 无边框悬浮窗，失焦自动隐藏
+- 键盘导航，含 Emacs 键位
+- 应用搜索（系统已安装应用，支持拼音和首字母）
+- `@` 文件搜索，`?` 网页搜索，`/` 命令
+- 托盘、开机启动、设置
 
-- `Alt+Space` global hotkey to show/hide
-- Frameless floating window, auto-hides on focus loss
-- Keyboard navigation (↑ ↓ Enter Esc)
-- Plugin architecture for easy extension
-- App search built-in (Start Menu on Windows, `.desktop` files on Linux)
+配置和用过记录仍在原来的目录：Windows 上是 `%APPDATA%\launcher`（`settings.json`、`usage.json`）。
 
-## Requirements
+## 环境
 
-- CMake 3.20+
-- Qt 6.x (`Widgets` module)
-- C++17 compiler
-- Git (for FetchContent to fetch [QHotkey](https://github.com/Skycoder42/QHotkey))
+- Go 1.27.3 或更新
 
-## Build
+## 运行
 
-```bash
-mkdir build && cd build
-cmake ..
-cmake --build . --config Release
+```powershell
+go run .
 ```
 
-## Project Structure
+打一个不带控制台窗口的程序：
 
-```
-src/
-├── main.cpp
-├── mainwindow.h / .cpp     # Core window
-├── plugin/
-│   ├── iplugin.h           # Plugin interface
-│   └── resultitem.h        # Result data struct
-└── plugins/
-    └── appplugin.h / .cpp  # Built-in app launcher plugin
+```powershell
+go build -ldflags="-H windowsgui" -o launcher.exe .
 ```
 
-## Adding a Plugin
+## 测试
 
-Implement `IPlugin` and register it in `main.cpp`:
-
-```cpp
-class MyPlugin : public IPlugin {
-public:
-    QString           name()  const override { return "MyPlugin"; }
-    QList<ResultItem> query(const QString &keyword) override { /* ... */ }
-    void              execute(const ResultItem &item) override { /* ... */ }
-};
-
-// main.cpp
-win.addPlugin(new MyPlugin);
+```powershell
+go test ./internal/core/
 ```
 
-## Roadmap
+## 结构
 
-- [x] File search plugin
-- [x] Web search plugin
-- [x] System tray icon
-- [x] Settings UI
+```
+main.go                 窗口、热键、托盘
+view.go                 搜索面板
+query.go                前缀路由、防抖、排序
+internal/core           匹配、拼音、frecency、设置
+internal/plugins        应用、文件、网页、命令
+```
+
+新插件实现 `internal/plugin.Plugin`，在 `main.go` 里放进 `l.plugs`。打分用 `core.Score`，排序和截断由主窗口统一做。

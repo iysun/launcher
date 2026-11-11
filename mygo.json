@@ -1,0 +1,8 @@
+{
+  "name": "Launcher",
+  "identifier": "dev.iysun.launcher",
+  "out": "build",
+  "macos": {
+    "infoPlist": { "LSUIElement": true }
+  }
+}
