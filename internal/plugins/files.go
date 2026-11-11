@@ -77,8 +77,12 @@ func (Files) Execute(item plugin.Result) {
 }
 
 func (Files) ExecuteAlt(item plugin.Result) {
-	if item.Action != "" {
-		mygo.Shell.ShowItemInFolder(item.Action)
+	if item.Action == "" {
+		return
+	}
+	dir := filepath.Dir(item.Action)
+	if dir != "" {
+		_ = mygo.Shell.OpenPath(dir)
 	}
 }
 

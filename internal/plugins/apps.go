@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"log"
 	"strings"
 	"sync"
 
@@ -95,15 +94,7 @@ func (a *Apps) Execute(item plugin.Result) {
 	a.mu.RLock()
 	app, ok := a.byKey[item.Action]
 	a.mu.RUnlock()
-	if ok {
-		if err := mygo.Shell.LaunchApp(app); err != nil {
-			log.Printf("launch %s: %v", app.Name, err)
-		}
-		return
-	}
-	if item.Action != "" {
-		_ = mygo.Shell.OpenPath(expandPath(item.Action))
-	}
+	launchAction(item.Action, app, ok)
 }
 
 func (a *Apps) ExecuteAlt(item plugin.Result) {

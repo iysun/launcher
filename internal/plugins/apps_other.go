@@ -4,34 +4,66 @@ package plugins
 
 import (
 	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/egoist/mygo"
 	"github.com/iysun/launcher/internal/core"
 )
 
 func scanInstalled() []indexedApp {
-	apps, err := mygo.Shell.InstalledApps()
-	if err != nil {
-		log.Print(err)
-		return nil
+	home, _ := os.UserHomeDir()
+	dirs := []string{"/usr/share/applications"}
+	if home != "" {
+		dirs = append(dirs, filepath.Join(home, ".local", "share", "applications"))
 	}
-	items := make([]indexedApp, 0, len(apps))
-	for _, app := range apps {
-		action := app.Path
-		if action == "" {
-			action = app.ID
+	var items []indexedApp
+	for _, dir := range dirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
 		}
-		items = append(items, indexedApp{
-			name:     app.Name,
-			action:   action,
-			subtitle: action,
-			icon:     action,
-			py:       core.ComputePinyin(app.Name),
-			sys:      app,
-			useSys:   true,
-		})
+		for _, e := range entries {
+			if e.IsDir() || !strings.HasSuffix(strings.ToLower(e.Name()), ".desktop") {
+				continue
+			}
+			b, err := os.ReadFile(filepath.Join(dir, e.Name()))
+			if err != nil {
+				continue
+			}
+			name, execLine, icon, ok := parseDesktop(string(b))
+			if !ok {
+				continue
+			}
+			iconPath := ""
+			if icon != "" {
+				if st, err := os.Stat(icon); err == nil && !st.IsDir() {
+					iconPath = icon
+				}
+			}
+			items = append(items, indexedApp{
+				name:     name,
+				action:   execLine,
+				subtitle: execLine,
+				icon:     iconPath,
+				py:       core.ComputePinyin(name),
+			})
+		}
 	}
 	return items
 }
 
 func expandPath(path string) string { return path }
+
+func launchAction(action string, _ mygo.InstalledApp, _ bool) {
+	cmd := stripFieldCodes(action)
+	if cmd == "" {
+		return
+	}
+	c := exec.Command("/bin/sh", "-c", cmd)
+	if err := c.Start(); err != nil {
+		log.Printf("launch %s: %v", cmd, err)
+	}
+}

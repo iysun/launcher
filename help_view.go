@@ -8,7 +8,7 @@ func (l *launcher) helpView(c *ui.Context) {
 		l.helpWin.Hide()
 	}
 	ui.Column(c).Fill().Background(t.Background).Children(func() {
-		ui.Text(c, "帮助").FontSize(18).Bold().Padding(16, 20, 8, 20)
+		ui.Text(c, "帮助").FontSize(18).Bold().Padding(16, 20, 8, 20).DragWindow()
 		ui.Divider(c)
 		ui.Scroll(c).Grow(1).Padding(8, 20).Children(func() {
 			ui.Column(c).Gap(8).Children(func() {
@@ -26,6 +26,9 @@ func (l *launcher) helpView(c *ui.Context) {
 				helpRow(c, "/", "命令（只输入 / 列出全部）")
 				helpRow(c, "@", "文件搜索")
 				helpRow(c, "?", "网页搜索")
+				helpRow(c, ":", "执行命令并展示输出；Ctrl+Enter 进终端")
+				helpRow(c, "::", "在新标签页打开终端")
+				helpRow(c, "Ctrl+"+"`", "进入或退出内嵌终端")
 				section(c, "命令")
 				for _, cmd := range l.helpCmds {
 					helpRow(c, "/"+cmd.ID, cmd.Desc)

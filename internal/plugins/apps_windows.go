@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/egoist/mygo"
 	"github.com/iysun/launcher/internal/core"
 	"golang.org/x/sys/windows"
 )
@@ -139,4 +140,16 @@ func expandPath(path string) string {
 		return path
 	}
 	return syscall.UTF16ToString(buf)
+}
+
+func launchAction(action string, app mygo.InstalledApp, ok bool) {
+	if ok {
+		if err := mygo.Shell.LaunchApp(app); err != nil {
+			log.Printf("launch %s: %v", app.Name, err)
+		}
+		return
+	}
+	if action != "" {
+		_ = mygo.Shell.OpenPath(expandPath(action))
+	}
 }

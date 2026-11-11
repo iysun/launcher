@@ -49,6 +49,9 @@ func (l *launcher) flushAndOpen(alt bool) {
 }
 
 func (l *launcher) runQuery() {
+	if l.mode != modeSearch {
+		return
+	}
 	if l.panel != nil && !l.panel.IsVisible() {
 		return
 	}

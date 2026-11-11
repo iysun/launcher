@@ -9,7 +9,7 @@ func (l *launcher) settingsView(c *ui.Context) {
 		l.settingsWin.Hide()
 	}
 	ui.Column(c).Fill().Background(t.Background).Children(func() {
-		ui.Text(c, "设置").FontSize(18).Bold().Padding(16, 20, 8, 20)
+		ui.Text(c, "设置").FontSize(18).Bold().Padding(16, 20, 8, 20).DragWindow()
 		ui.Divider(c)
 		ui.Scroll(c).Grow(1).Padding(8, 20).Children(func() {
 			ui.Column(c).Gap(14).Children(func() {
