@@ -120,17 +120,22 @@ func (l *launcher) ready() {
 		}
 	}
 
+	vibrancy := mygo.VibrancyGlass
+	if plainPanel() {
+		vibrancy = mygo.VibrancyNone
+	}
 	l.panel = mygo.NewWindow(mygo.WindowOptions{
 		Title:         "Launcher",
 		Panel:         true,
 		Hidden:        true,
 		Frameless:     true,
 		Transparent:   true,
-		Vibrancy:      mygo.VibrancyGlass,
+		Vibrancy:      vibrancy,
 		CornerRadius:  panelRadius,
 		Width:         panelWidth,
 		Height:        searchH,
 		DisableResize: true,
+		DisableShadow: plainPanel(),
 		Content:       ui.View(l.view),
 	})
 	l.panel.OnClose(func(e *mygo.CloseEvent) {
