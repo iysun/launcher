@@ -72,6 +72,7 @@ func scanInstalled() []indexedApp {
 				subtitle: target,
 				icon:     target,
 				py:       core.ComputePinyin(name),
+				launch:   path,
 			})
 			return nil
 		})
@@ -142,10 +143,12 @@ func expandPath(path string) string {
 	return syscall.UTF16ToString(buf)
 }
 
-func launchAction(action string, app mygo.InstalledApp, ok bool) {
-	if ok {
-		if err := mygo.Shell.LaunchApp(app); err != nil {
-			log.Printf("launch %s: %v", app.Name, err)
+// launchAction opens the shortcut itself when there is one, so that Windows
+// applies the shortcut's arguments and working directory, as Explorer does.
+func launchAction(action, launch string) {
+	if launch != "" {
+		if err := mygo.Shell.OpenPath(launch); err != nil {
+			log.Printf("launch %s: %v", launch, err)
 		}
 		return
 	}

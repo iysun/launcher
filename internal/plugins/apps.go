@@ -20,16 +20,15 @@ type indexedApp struct {
 	subtitle string
 	icon     string
 	py       core.Pinyin
-	sys      mygo.InstalledApp
-	useSys   bool
+	launch   string
 }
 
 // Apps searches installed applications. On Windows that is the Start Menu
 // shortcuts, with the shortcut resolved to the program path.
 type Apps struct {
-	mu    sync.RWMutex
-	items []indexedApp
-	byKey map[string]mygo.InstalledApp
+	mu     sync.RWMutex
+	items  []indexedApp
+	launch map[string]string
 }
 
 func (a *Apps) Name() string   { return "AppLauncher" }
@@ -38,15 +37,15 @@ func (a *Apps) Async() bool    { return false }
 
 func (a *Apps) Reload() {
 	items := scanInstalled()
-	byKey := map[string]mygo.InstalledApp{}
+	launch := make(map[string]string, len(items))
 	for _, it := range items {
-		if it.useSys {
-			byKey[it.action] = it.sys
+		if it.launch != "" {
+			launch[it.action] = it.launch
 		}
 	}
 	a.mu.Lock()
 	a.items = items
-	a.byKey = byKey
+	a.launch = launch
 	a.mu.Unlock()
 }
 
@@ -92,9 +91,9 @@ func (a *Apps) Query(keyword string) []plugin.Result {
 
 func (a *Apps) Execute(item plugin.Result) {
 	a.mu.RLock()
-	app, ok := a.byKey[item.Action]
+	launch := a.launch[item.Action]
 	a.mu.RUnlock()
-	launchAction(item.Action, app, ok)
+	launchAction(item.Action, launch)
 }
 
 func (a *Apps) ExecuteAlt(item plugin.Result) {

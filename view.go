@@ -13,7 +13,8 @@ func (l *launcher) view(c *ui.Context) {
 	if c.Vibrancy() {
 		root.Background(ui.Transparent)
 	} else {
-		root.Background(t.Background)
+		// Windows 10 不做 DWM 圆角，也没有 vibrancy，自己画圆角卡片
+		root.Radius(panelRadius).ClipInset(0, 0, 0, 0, panelRadius).Background(t.Background)
 	}
 	if l.query != "" && c.Shortcut(0, ui.KeyEscape) {
 		l.query = ""

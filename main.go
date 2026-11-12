@@ -22,12 +22,13 @@ import (
 )
 
 const (
-	panelWidth = 620
-	searchH    = 56
-	rowH       = 56
-	footH      = 28
-	iconSize   = 32
-	maxResults = 8
+	panelWidth  = 620
+	searchH     = 56
+	rowH        = 56
+	footH       = 28
+	iconSize    = 32
+	maxResults  = 8
+	panelRadius = 16
 )
 
 type plugDraft struct {
@@ -126,7 +127,7 @@ func (l *launcher) ready() {
 		Frameless:     true,
 		Transparent:   true,
 		Vibrancy:      mygo.VibrancyGlass,
-		CornerRadius:  16,
+		CornerRadius:  panelRadius,
 		Width:         panelWidth,
 		Height:        searchH,
 		DisableResize: true,

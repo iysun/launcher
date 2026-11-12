@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/egoist/mygo"
 	"github.com/iysun/launcher/internal/core"
 )
 
@@ -57,7 +56,7 @@ func scanInstalled() []indexedApp {
 
 func expandPath(path string) string { return path }
 
-func launchAction(action string, _ mygo.InstalledApp, _ bool) {
+func launchAction(action, _ string) {
 	cmd := stripFieldCodes(action)
 	if cmd == "" {
 		return

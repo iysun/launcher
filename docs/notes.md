@@ -16,3 +16,5 @@
 - [Alt+Space 是 Windows 系统保留键](notes/altspace-reserved-key.md) — 全局热键注册失败（不崩溃仅无效）时回退 Ctrl+Space
 - [查询防抖与异步接缝](notes/query-debounce-async-seam.md) — 为何 runQuery 现在同步执行、线程化推迟到 FilePlugin 落地
 - [FilePlugin 同步遍历的访问上限兜底](notes/fileplugin-bounded-scan.md) — `@` 文件搜索为何用 kMaxVisit 封顶而非线程化
+- [Windows 10 上面板没有圆角](notes/win10-panel-corner.md) — DWM 圆角只在 Win11 生效，Win10 需自绘圆角卡片
+- [启动应用要打开 .lnk 而不是解析出的 exe](notes/launch-shortcut-workdir.md) — 直接启动 exe 会丢掉快捷方式的「起始位置」，Emacs 等程序启动目录不对
