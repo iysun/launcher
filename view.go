@@ -15,35 +15,23 @@ func (l *launcher) view(c *ui.Context) {
 	} else {
 		root.Background(t.Background)
 	}
-	if l.mode == modeTerm {
-		l.termKeys(c)
-		l.termBody(c)
-		return
+	if l.query != "" && c.Shortcut(0, ui.KeyEscape) {
+		l.query = ""
+		l.clearResults()
 	}
-	if l.mode == modeWrap {
-		l.wrapKeys(c)
-	} else {
-		if l.query != "" && c.Shortcut(0, ui.KeyEscape) {
-			l.query = ""
-			l.clearResults()
-		}
-		if c.Shortcut(0, ui.KeyDown) || c.Shortcut(ui.Ctrl, ui.KeyN) {
-			l.choose(l.chosen + 1)
-		}
-		if c.Shortcut(0, ui.KeyUp) || c.Shortcut(ui.Ctrl, ui.KeyP) {
-			l.choose(l.chosen - 1)
-		}
-		if c.Shortcut(ui.Ctrl, ui.KeyEnter) {
-			l.flushAndOpen(true)
-		} else if c.Shortcut(0, ui.KeyEnter) {
-			l.flushAndOpen(false)
-		}
-		if c.Shortcut(ui.Ctrl, ui.KeyG) {
-			l.panel.Hide()
-		}
-		if c.Shortcut(ui.Ctrl, ui.KeyBackquote) {
-			l.enterTerminal("", false)
-		}
+	if c.Shortcut(0, ui.KeyDown) || c.Shortcut(ui.Ctrl, ui.KeyN) {
+		l.choose(l.chosen + 1)
+	}
+	if c.Shortcut(0, ui.KeyUp) || c.Shortcut(ui.Ctrl, ui.KeyP) {
+		l.choose(l.chosen - 1)
+	}
+	if c.Shortcut(ui.Ctrl, ui.KeyEnter) {
+		l.flushAndOpen(true)
+	} else if c.Shortcut(0, ui.KeyEnter) {
+		l.flushAndOpen(false)
+	}
+	if c.Shortcut(ui.Ctrl, ui.KeyG) {
+		l.panel.Hide()
 	}
 
 	ui.Column(c).Fill().Children(func() {
@@ -52,26 +40,13 @@ func (l *launcher) view(c *ui.Context) {
 			in := ui.TextInputBase(c, &l.query).Bind(&l.input).Grow(1).FontSize(22).
 				Placeholder("输入关键词搜索, /help 获取帮助").Label("搜索")
 			in.OnTextKey(func(k ui.TextKey) bool { return l.onTextKey(in, k) })
-			if in.Submitted() && l.mode == modeSearch {
+			if in.Submitted() {
 				l.flushAndOpen(false)
 			}
 			if in.Changed() {
-				if l.mode == modeWrap {
-					if !strings.HasPrefix(l.query, ":") {
-						l.leaveWrap(true)
-					}
-				} else {
-					l.scheduleQuery()
-				}
+				l.scheduleQuery()
 			}
 		})
-		if l.status != "" && l.mode == modeSearch {
-			ui.Text(c, l.status).FontSize(12).TextColor(t.Danger).Padding(0, 18, 8, 18)
-		}
-		if l.mode == modeWrap {
-			l.wrapOutput(c)
-			return
-		}
 		if len(l.results) == 0 && (strings.TrimSpace(l.query) == "" || l.timer != nil) {
 			return
 		}

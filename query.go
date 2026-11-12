@@ -8,7 +8,6 @@ import (
 
 	"github.com/iysun/launcher/internal/core"
 	"github.com/iysun/launcher/internal/plugin"
-	"github.com/iysun/launcher/internal/plugins"
 )
 
 func (l *launcher) clearResults() {
@@ -50,9 +49,6 @@ func (l *launcher) flushAndOpen(alt bool) {
 }
 
 func (l *launcher) runQuery() {
-	if l.mode != modeSearch {
-		return
-	}
 	if l.panel != nil && !l.panel.IsVisible() {
 		return
 	}
@@ -161,11 +157,7 @@ func (l *launcher) activate(alt bool) {
 		return
 	}
 	item := l.results[l.chosen]
-	switch item.Owner.(type) {
-	case plugins.Run, plugins.RunPersistent:
-	default:
-		l.panel.Hide()
-	}
+	l.panel.Hide()
 	if item.Owner == nil {
 		return
 	}

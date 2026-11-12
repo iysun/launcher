@@ -9,11 +9,7 @@ import (
 
 func (l *launcher) onTextKey(in ui.Element, k ui.TextKey) bool {
 	if k.Key == ui.KeyEnter && (k.Mods == 0 || k.Mods == ui.Ctrl) {
-		if l.mode == modeWrap {
-			l.rerunWrap(k.Mods == ui.Ctrl)
-		} else if l.mode == modeSearch {
-			l.flushAndOpen(k.Mods == ui.Ctrl)
-		}
+		l.flushAndOpen(k.Mods == ui.Ctrl)
 		return true
 	}
 	if k.Mods == ui.Ctrl {

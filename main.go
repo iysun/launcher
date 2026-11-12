@@ -72,9 +72,6 @@ type launcher struct {
 	shownAt     time.Time
 	trayClick   time.Time
 	recording   bool
-	mode        int
-	status      string
-	terms       termState
 }
 
 func main() {
@@ -94,7 +91,6 @@ func main() {
 	l.commands.Add("reload", "重新加载应用列表", l.reloadApps)
 	l.commands.Add("datadir", "打开配置 / 数据目录", l.openData)
 	l.commands.Add("restart", "重启 launcher", l.restart)
-	l.commands.Add("terminal", "打开终端", func() { l.enterTerminal("", false) })
 	l.commands.Add("settings", "打开设置", l.openSettings)
 	web := plugins.Web{Order: func() []string { return l.cfg.WebEngineOrder }}
 	l.plugs = []plugin.Plugin{
@@ -102,8 +98,6 @@ func main() {
 		plugins.Files{},
 		web,
 		l.commands,
-		plugins.RunPersistent{Open: l.openPersistent},
-		plugins.Run{Wrap: l.runWrap, Term: l.openPersistent},
 	}
 
 	mygo.App.SetName("Launcher")
@@ -145,9 +139,6 @@ func (l *launcher) ready() {
 	// 刚 Show 时 Windows 常常不把前台交给新进程，失焦会立刻到来。
 	// 这段时间里藏起来，看起来就像窗口没了。
 	l.panel.OnBlur(func() {
-		if l.mode != modeSearch {
-			return
-		}
 		if time.Since(l.shownAt) < 600*time.Millisecond {
 			return
 		}
@@ -182,7 +173,6 @@ func (l *launcher) ready() {
 	l.watchApps()
 
 	mygo.App.OnWillQuit(func(*mygo.QuitEvent) {
-		l.closeTerms()
 		if l.watchCancel != nil {
 			l.watchCancel()
 		}
@@ -265,35 +255,28 @@ func (l *launcher) reloadApps() {
 }
 
 func (l *launcher) show() {
-	if l.mode == modeSearch {
-		l.query = ""
-		l.clearResults()
-	}
-	l.place(l.mode == modeTerm)
+	l.query = ""
+	l.clearResults()
+	l.place()
 	l.shownAt = time.Now()
-	if l.mode != modeTerm {
-		l.input.Focus()
-	}
+	l.input.Focus()
 	l.panel.Show()
 	l.panel.Focus()
 }
 
-func (l *launcher) place(center bool) {
+func (l *launcher) place() {
 	d := mygo.Screen.DisplayNearestPoint(mygo.Screen.CursorScreenPoint())
-	w, h := l.panel.Size()
+	w, _ := l.panel.Size()
 	if w == 0 {
 		w = panelWidth
 	}
 	x := d.WorkArea.X + (d.WorkArea.Width-w)/2
 	y := d.WorkArea.Y + d.WorkArea.Height/4
-	if center {
-		y = d.WorkArea.Y + (d.WorkArea.Height-h)/2
-	}
 	l.panel.SetPosition(x, y)
 }
 
 func (l *launcher) fit() {
-	if l.panel == nil || l.mode != modeSearch {
+	if l.panel == nil {
 		return
 	}
 	n := len(l.results)
@@ -365,8 +348,6 @@ func (l *launcher) loadDraft() {
 		{"Files", "文件搜索", l.cfg.PluginEnabled("Files")},
 		{"Web", "网页搜索", l.cfg.PluginEnabled("Web")},
 		{"Commands", "命令", l.cfg.PluginEnabled("Commands")},
-		{"Run", "命令执行", l.cfg.PluginEnabled("Run")},
-		{"RunPersistent", "持久终端", l.cfg.PluginEnabled("RunPersistent")},
 	}
 }
 
